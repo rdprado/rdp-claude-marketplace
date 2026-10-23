@@ -1,0 +1,101 @@
+# PnT AI standards
+
+<!-- Copied into each project by /pnt:setup-repo as .claude/pnt-standards.md and
+     refreshed by the PnT commands. Don't edit the copy: change it in
+     pnt-claude-marketplace (plugins/pnt/templates/pnt-standards.md). -->
+
+Shared rules for every PnT project. When this file and the project's `CLAUDE.md` or `docs/architecture/` conflict, the project wins.
+
+## On-demand rules
+
+Topic rules are skills in the `pnt` plugin. Before starting a task listed below, load the matching skill and follow it. Load only the rows that match the task and the project's stack. Which skills apply to this project (e.g. clean architecture) is in the PnT block of the project's `CLAUDE.md`.
+
+| Task | .NET | TypeScript / React (Native) |
+|---|---|---|
+| Writing, reviewing or fixing code | `clean-architecture` | `clean-architecture-typescript` |
+| Adding or changing tests | `testing` | `testing-typescript` |
+| Adding or changing configuration keys / environments | `configuration` | — |
+| Adding a SignalR hub or touching hub code | `signalr` | — |
+| Running `ci/verify.sh`, reading a Sonar quality gate or issues, or touching Sonar config | `sonar` | `sonar` |
+| Touching CI/CD YAML, `ci/` scripts, deploys, or pipeline secrets | `pipelines` | `pipelines` |
+| Committing, branching, or opening a PR | `git-flow` | `git-flow` |
+
+## Code style
+
+- Functions do one thing where it's natural. Don't extract one-call helpers just to shorten code.
+- When a function gets big or clearly does multiple things, extract — even when it's awkward. Size is a forcing function, not a target.
+- Stepdown order: if `A` calls `B`, define `B` below `A`. The file reads top to bottom like a newspaper.
+- Files hold one cohesive thing — one class, one feature, or a set of closely related helpers. Split when it does unrelated jobs. Past ~1500 lines, look hard for what to extract.
+- Names: specific and unique. Avoid `data`, `handler`, `Manager`.
+  Prefer names that return <5 grep hits in the codebase.
+- Extract shared logic when the duplicated code represents the same concept, not just the same characters. If the two places would always change together, extract. If they might evolve apart, leave them duplicated.
+- Prefer early returns / guard clauses over nested ifs. Watch for deep nesting — if a block reads gnarly, restructure (split the function, invert the condition, extract the inner loop).
+- Ship the smallest edit that solves the problem.
+- Take complexity out before you add anything.
+- If the code is already clear and local, leave it.
+
+## Working method
+
+- Fix root causes: reproduce the problem, then fix the cause. A guard that only hides the error is not a fix.
+- If two fixes built on the same premise fail, stop. Write the premise in one sentence and question it before trying again.
+- Refactoring: pin the behavior with tests, change the structure, prove the behavior did not change.
+- Work in small units: finish and check one before starting the next.
+- Don't bolt a new requirement onto the old design. Think what you would have built if it had been there from the start, then deliver that in pieces.
+- If a change repeats across many places, build a tool (a script) for it: do one place by hand, make the tool match it, then run it on the rest.
+- Keep the main context small: one task per agent; send bulk work to subagents and keep only their summaries.
+
+## Exceptions
+
+- Don't catch an exception unless you're adding value: recover, transform, enrich, or swallow with a documented reason. Empty catches and bare rethrows (`catch { throw; }`) add nothing.
+- When reviewing the app's startup code (composition root), check that a global exception handler is registered. If it's missing, flag it there — not on unrelated tasks.
+- If you catch and don't rethrow, log the full exception (message + stack trace). Otherwise the error disappears silently.
+
+## Comments
+
+- Keep your own comments if relevant to understanding later. Don't strip them on refactor — they carry
+  intent and provenance.
+- Write WHY, not WHAT. Skip `// increment counter` above `i++`.
+- Docstrings on non-trivial public functions: intent + one usage example.
+- Reference issue numbers / commit SHAs when a line exists because
+  of a specific bug or upstream constraint.
+
+## Dependencies
+
+- Prefer constructor / parameter injection over static state or globals.
+- Wrap third-party libs behind a thin interface owned by this project.
+
+## Formatting
+
+- Use the language formatter (`dotnet format`, `prettier`). Don't discuss style beyond that. Whether CI enforces lint depends on the stack — see the `pipelines` skill → *Lint*.
+
+## Logging
+
+- Use structured logging (key-value pairs, not string concatenation).
+- Don't log secrets, tokens, or PII.
+- Pick a log level deliberately: `Info` for business events, `Warning` for degraded/recoverable state, `Error` for failures requiring attention.
+
+## Security
+
+- If you spot a secret in code or config — API key, connection string, token, password — stop. Warn the user, suggest moving it to environment variables / secret store / pipeline variables, and do not commit the file containing it unless the user explicitly authorizes it.
+
+## Work log
+
+- Keep a log of every action and why in `.claude/tmp/log-<task>.md`. Report it when the task ends, then delete it.
+
+## PnT commands
+
+Jira work uses the commands: `/pnt:story` (creates the story and its three subtasks), then `/pnt:implement <KEY> [<KEY> ...]` (several stories at once run in parallel, one branch and PR each); `/pnt:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
+
+## Jira
+
+Jira is the single source of truth for plans and work status. Don't keep plans or progress in local files; temporary drafts go in `.claude/tmp/` (gitignored) and are deleted once written to Jira. If there is no ticket for the work, ask whether to create one.
+
+Each project `CLAUDE.md` names its Jira project key and the project's tag (`- Jira project: <KEY> — tag [<Project>]`); every issue for that project starts its title with the tag. Work history lives in git and in those Jira issues, never in `CLAUDE.md`. The project's status names, issue types and fields are read from Jira, never guessed. If Jira is unreachable, ask.
+
+## Internal documentation (Confluence)
+
+Internal systems are documented in Confluence **Pnt - Interno** (`PI1`), start page "Pnt - Interno": https://plugntrade.atlassian.net/wiki/spaces/PI1/overview. Start searches there. After a push or pull request, suggest the dev update the project's page there via the Atlassian connector.
+
+- The project catalog is the page "Catálogo de Projetos" in PI1. Check it first to find a project's repo. Catalog entries name the repo by its Bitbucket or SVN location, never a local path.
+- To read a repo's code, find its local clone by the repo name; if it isn't cloned, say so.
+- Confluence holds only basic, stable knowledge that will take a long time to change (what a system is, how it relates to others, history that is not in the code). Never put there what the repo already says (files, key lists, values, test details) or anything dynamic (ticket status, "story X will change Y", what is pending or unconfirmed): that goes in the code, tests, Jira or a repo/memory note.

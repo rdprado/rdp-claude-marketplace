@@ -1,0 +1,36 @@
+{
+  "name": "rdp-claude-marketplace",
+  "owner": {
+    "name": "rdprado"
+  },
+  "description": "Personal marketplace: the pnt plugin (AI standards, commands, agents, skills) and the pnt-mod band.",
+  "plugins": [
+    {
+      "name": "pnt",
+      "source": "./plugins/pnt",
+      "description": "PnT AI standards: /pnt:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
+      "category": "standards",
+      "keywords": [
+        "dotnet",
+        "typescript",
+        "clean-architecture",
+        "testing",
+        "ci-cd",
+        "git-flow",
+        "sonar",
+        "jira"
+      ]
+    },
+    {
+      "name": "pnt-mod",
+      "source": "./plugins/pnt-mod",
+      "description": "Shows the context size, colored by fill, and the tokens the last prompt spent per agent, above the prompt.",
+      "category": "productivity",
+      "keywords": [
+        "context",
+        "tokens",
+        "usage"
+      ]
+    }
+  ]
+}

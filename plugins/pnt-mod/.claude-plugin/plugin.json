@@ -1,0 +1,1 @@
+{ "name": "pnt-mod", "version": "0.1.0", "description": "Shows the current context size (tokens used / window) above the prompt, colored by fill", "types": "./types/index.d.ts" }
