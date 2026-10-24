@@ -20,7 +20,7 @@ Topic rules are skills in the `rdp` plugin. Before starting a task listed below,
 | Touching CI/CD YAML, `ci/` scripts, deploys, or pipeline secrets | `pipelines` | `pipelines` |
 | Committing, branching, or opening a PR | `git-flow` | `git-flow` |
 | Reading or writing GitHub issues or docs/ pages | `github-issues` | `github-issues` |
-| A new use case, feature or product decision | `product-manager` | `product-manager` |
+| Talking about or changing business logic, a use case, a feature or a product decision | `product-manager` | `product-manager` |
 
 ## Code style
 

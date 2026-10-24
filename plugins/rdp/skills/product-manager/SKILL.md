@@ -1,6 +1,6 @@
 ---
 name: product-manager
-description: "RDP product checks: weigh a new use case, feature, screen or product decision against the project's product doc (hypothesis, current test, what is frozen, design principles, cost limits). Use when discussing a new use case or product decision, or when writing or reviewing a story issue."
+description: "RDP product checks: weigh business logic, a use case, feature, screen or product decision against the project's product doc (hypothesis, current test, what is frozen, design principles, cost limits). Use whenever the conversation is about business logic (rules, flows, what the app should do), a new use case or a product decision, or when writing or reviewing a story issue."
 ---
 # Product manager
 
