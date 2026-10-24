@@ -1,6 +1,6 @@
 ---
 name: signalr
-description: PnT rules for ASP.NET Core SignalR. Use when adding a SignalR hub or touching hub code.
+description: RDP rules for ASP.NET Core SignalR. Use when adding a SignalR hub or touching hub code.
 ---
 # SignalR
 

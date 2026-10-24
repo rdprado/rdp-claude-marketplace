@@ -1,6 +1,6 @@
 ---
 name: testing
-description: PnT testing rules for .NET (xUnit, Moq, AAA, fixed time, what to mock). Use when adding or changing tests in .NET.
+description: RDP testing rules for .NET (xUnit, Moq, AAA, fixed time, what to mock). Use when adding or changing tests in .NET.
 ---
 # Testing
 

@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-typescript
-description: PnT rules for TypeScript / React / React Native — language, React, clean architecture, quality checks. Use when writing, reviewing or fixing TS/TSX code.
+description: RDP rules for TypeScript / React / React Native — language, React, clean architecture, quality checks. Use when writing, reviewing or fixing TS/TSX code.
 ---
 # Clean Architecture — TypeScript / React (Native)
 
@@ -41,7 +41,7 @@ Innermost to outermost. **Dependencies point inward.** Inner layers never import
 
 1. **Entities** — pure enterprise business rules. Entities, their invariants, and the value types that model the business. No React, no `expo-*`, no `axios`, no `@microsoft/signalr` imports. If you `import` a framework here, the layer is wrong.
 2. **Application** — application business rules; a sibling of Entities, not nested under it. Use cases, their `Input`/`Output` types, port interfaces (`StrategyRepository`, `Clock`), validators, and the shared primitives (`Result`/`OutputStatus`, `ValidationResult`). Depends only on Entities. Still no framework imports.
-3. **Infrastructure** — implementations of the application ports: API clients (Axios `WebBroker`), SignalR repositories, `SecureStore`, Sentry, Firebase, LaunchDarkly. Data-access adapters live under `infrastructure/data/`; other infra concerns (monitoring, config, feature flags) sit beside it. Each third-party SDK is wrapped behind an application port (an interface **owned by the Application layer**; see `.claude/pnt-standards.md` → "wrap third-party libs"). One module per concern.
+3. **Infrastructure** — implementations of the application ports: API clients (Axios `WebBroker`), SignalR repositories, `SecureStore`, Sentry, Firebase, LaunchDarkly. Data-access adapters live under `infrastructure/data/`; other infra concerns (monitoring, config, feature flags) sit beside it. Each third-party SDK is wrapped behind an application port (an interface **owned by the Application layer**; see `.claude/rdp-standards.md` → "wrap third-party libs"). One module per concern.
 4. **Interface Adapters** — the outer ring where **presentation and entry live together**. Presentation is a View pattern (MVVM / MVC / MVP / Passive View) — a React concern, not a Clean Architecture layer of its own; here it is the screens, components, custom hooks, and Zustand stores. Entry is the way input reaches the app: user clicks / Expo Router routes on the client, or HTTP endpoints on a backend. Both map user input to a use case input, call the use case, and render the `Output`. No business logic.
 5. **Composition root** — wires concrete implementations to ports and provides them to the interface-adapters layer (see "Dependency injection" below).
 
@@ -332,7 +332,7 @@ The `switch` has no `default` — TypeScript flags it if a new `OutputStatus` is
 
 ## Dependency injection
 
-TS/React has no DI container by default, and we don't add one. Two idiomatic mechanisms, both honoring `.claude/pnt-standards.md` ("prefer injection over globals"):
+TS/React has no DI container by default, and we don't add one. Two idiomatic mechanisms, both honoring `.claude/rdp-standards.md` ("prefer injection over globals"):
 
 1. **Composition root** — a single module that constructs the concrete implementations and binds them to use cases. This is the TS equivalent of the .NET `AddApplication()/AddInfrastructure()` extension methods.
 
@@ -367,7 +367,7 @@ export const useUseCases = () => {
 ## Don't
 
 - Don't import `react`, `expo-*`, `axios`, or `@microsoft/signalr` from `entities/` or `application/`. Define a port; implement it in `infrastructure/`.
-- Don't use `any`. Use `unknown` and narrow, or define a real type (see `.claude/pnt-standards.md`).
+- Don't use `any`. Use `unknown` and narrow, or define a real type (see `.claude/rdp-standards.md`).
 - Don't put business rules in components, hooks, or Zustand stores. Those belong in use cases and entities.
 - Don't throw from use cases for expected failures (validation, not-found). Return a `Result`.
 - Don't call `new Date()`, `Date.now()`, or `Math.random()` inside entities or application code. Inject a `Clock` / RNG port — otherwise it isn't testable.

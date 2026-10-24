@@ -1,14 +1,14 @@
-# PnT AI standards
+# RDP AI standards
 
-<!-- Copied into each project by /rdp:setup-repo as .claude/pnt-standards.md and
-     refreshed by the PnT commands. Don't edit the copy: change it in
-     pnt-claude-marketplace (plugins/rdp/templates/pnt-standards.md). -->
+<!-- Copied into each project by /rdp:setup-repo as .claude/rdp-standards.md and
+     refreshed by the RDP commands. Don't edit the copy: change it in
+     rdp-claude-marketplace (plugins/rdp/templates/rdp-standards.md). -->
 
-Shared rules for every PnT project. When this file and the project's `CLAUDE.md` or `docs/architecture/` conflict, the project wins.
+Shared rules for every RDP project. When this file and the project's `CLAUDE.md` or `docs/architecture/` conflict, the project wins.
 
 ## On-demand rules
 
-Topic rules are skills in the `pnt` plugin. Before starting a task listed below, load the matching skill and follow it. Load only the rows that match the task and the project's stack. Which skills apply to this project (e.g. clean architecture) is in the PnT block of the project's `CLAUDE.md`.
+Topic rules are skills in the `rdp` plugin. Before starting a task listed below, load the matching skill and follow it. Load only the rows that match the task and the project's stack. Which skills apply to this project (e.g. clean architecture) is in the RDP block of the project's `CLAUDE.md`.
 
 | Task | .NET | TypeScript / React (Native) |
 |---|---|---|
@@ -83,7 +83,7 @@ Topic rules are skills in the `pnt` plugin. Before starting a task listed below,
 
 - Keep a log of every action and why in `.claude/tmp/log-<task>.md`. Report it when the task ends, then delete it.
 
-## PnT commands
+## RDP commands
 
 Issue work uses the commands: `/rdp:story` (creates the story issue with its three-item checklist), then `/rdp:implement <#n> [<#n> ...]` (several stories at once run in parallel, one branch and PR each); `/rdp:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
 

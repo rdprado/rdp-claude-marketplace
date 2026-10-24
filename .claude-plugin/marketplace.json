@@ -8,7 +8,7 @@
     {
       "name": "rdp",
       "source": "./plugins/rdp",
-      "description": "PnT AI standards: /rdp:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
+      "description": "RDP AI standards: /rdp:setup-repo and every RDP command keep each project's CLAUDE.md and .claude/rdp-standards.md current; the standards load as skills.",
       "category": "standards",
       "keywords": [
         "dotnet",

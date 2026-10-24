@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Reference ci/verify.sh for PnT .NET projects. Copy it to the project's ci/
+# Reference ci/verify.sh for RDP .NET projects. Copy it to the project's ci/
 # folder, fill in the "Project settings" block (same values as the project's
 # CLAUDE.md "Sonar" section and the pipeline), and commit it with eol=lf.
-# Rules behind it: the pnt plugin's pipelines skill -> "One verify script",
+# Rules behind it: the rdp plugin's pipelines skill -> "One verify script",
 # and sonar.md for how the Sonar result is read and reported.
 #
 # Sonar analysis parameters (coverage path, exclusions, ignored rules) are

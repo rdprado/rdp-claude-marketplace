@@ -1,6 +1,6 @@
 ---
 name: clean-architecture
-description: "PnT clean architecture for .NET: layers, dependency rules, use cases, entities, validation. Use when writing, reviewing or fixing code in a .NET clean-architecture project."
+description: "RDP clean architecture for .NET: layers, dependency rules, use cases, entities, validation. Use when writing, reviewing or fixing code in a .NET clean-architecture project."
 ---
 # Clean Architecture
 

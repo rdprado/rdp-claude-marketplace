@@ -2,17 +2,17 @@
 
 <!-- Template for a legacy project's CLAUDE.md, copied to the project root as
      CLAUDE.md by /rdp:setup-repo. Keep this file to project specifics only, and
-     never put absolute paths in it. When running /init, keep the PnT block and
+     never put absolute paths in it. When running /init, keep the RDP block and
      the "Project profile" block, and fill in the skeleton below them.
-     Required: "Project profile" (the PnT commands read it). Every other section
+     Required: "Project profile" (the RDP commands read it). Every other section
      is optional: delete what doesn't apply (e.g. Sonar or Git flow in a project
      with no git/CI) or write "N/A" in its line. -->
 
-<!-- PnT block — written by /rdp:setup-repo, refreshed by the PnT commands. -->
-@.claude/pnt-standards.md
+<!-- RDP block — written by /rdp:setup-repo, refreshed by the RDP commands. -->
+@.claude/rdp-standards.md
 
-Rules that apply: all PnT skills except clean architecture. Tests are not required; any test you add follows the `testing` skill.
-<!-- end PnT block -->
+Rules that apply: all RDP skills except clean architecture. Tests are not required; any test you add follows the `testing` skill.
+<!-- end RDP block -->
 
 ## Project profile
 

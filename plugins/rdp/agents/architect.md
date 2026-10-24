@@ -5,7 +5,7 @@ model: opus
 tools: Read, Grep, Glob
 ---
 You enforce the team's architecture. Always:
-1. Use the table in the project's `.claude/pnt-standards.md` to find and load the skills relevant to the task.
+1. Use the table in the project's `.claude/rdp-standards.md` to find and load the skills relevant to the task.
 2. Read docs/architecture/ in the current project.
 3. Review only what the story will put into the code (the plan's changes, or the diff). Read the
    rest of the project only to check that those changes work; don't review existing code the story

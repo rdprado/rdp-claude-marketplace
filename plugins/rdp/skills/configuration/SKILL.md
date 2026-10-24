@@ -1,6 +1,6 @@
 ---
 name: configuration
-description: PnT rules for .NET appsettings*.json, environments and secrets in config. Use when adding or changing configuration keys or environments.
+description: RDP rules for .NET appsettings*.json, environments and secrets in config. Use when adding or changing configuration keys or environments.
 ---
 # Configuration (.NET)
 

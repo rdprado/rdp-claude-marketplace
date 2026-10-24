@@ -1,11 +1,11 @@
 ---
-description: Quick guide to the PnT commands, the order to use them, and where things live
+description: Quick guide to the RDP commands, the order to use them, and where things live
 ---
 Print the text below exactly as written (the card goes in one code block).
-Don't add anything before it. After it, check the PnT standards once: if the
-project's `CLAUDE.md` has no PnT block, suggest `/rdp:setup-repo`; otherwise compare
-`.claude/pnt-standards.md` and the PnT block with
-`${CLAUDE_PLUGIN_ROOT}/templates/` and, if they differ, say "The PnT standards
+Don't add anything before it. After it, check the RDP standards once: if the
+project's `CLAUDE.md` has no RDP block, suggest `/rdp:setup-repo`; otherwise compare
+`.claude/rdp-standards.md` and the RDP block with
+`${CLAUDE_PLUGIN_ROOT}/templates/` and, if they differ, say "The RDP standards
 in this project are out of date" and offer to update them (then they must be
 committed). Then ask in one line if I want more detail on any command.
 
@@ -18,7 +18,7 @@ committed). Then ask in one line if I want more detail on any command.
 ┌─ Commands, in order ───────────────────────────────────────────────┐
 │                                                                    │
 │ 0  /rdp:setup-repo              once per project: helps you write or    │
-│                            update CLAUDE.md with the PnT AI        │
+│                            update CLAUDE.md with the RDP AI        │
 │                            standards                               │
 │                                                                    │
 │ 1  /rdp:story              rough idea → GitHub issue with its      │
@@ -42,7 +42,7 @@ committed). Then ask in one line if I want more detail on any command.
 │                                                                    │
 │ Tasks, plans, status    →  GitHub issues (titles start with [tag]) │
 │ Docs                    →  the repo's docs/ folder                 │
-│ AI standards            →  pnt plugin (pnt-claude-marketplace)     │
+│ AI standards            →  rdp plugin (rdp-claude-marketplace)     │
 │ Project specifics       →  project CLAUDE.md (refers to the        │
 │                            AI standards)                           │
 └────────────────────────────────────────────────────────────────────┘

@@ -5,7 +5,7 @@
 # browser. No token, no API call, no files written.
 # Used by /rdp:implement (main session) and by developers.
 #
-# Runs from the pnt plugin — it is NOT copied into projects and never
+# Runs from the rdp plugin — it is NOT copied into projects and never
 # runs in CI. Run it from inside the project repo:
 #
 #   ${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh \

@@ -1,6 +1,6 @@
 ---
 name: git-flow
-description: PnT branching, commit and pull request rules (git and SVN). Use when committing, branching or opening a PR.
+description: RDP branching, commit and pull request rules (git and SVN). Use when committing, branching or opening a PR.
 ---
 # Git flow
 

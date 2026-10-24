@@ -1,6 +1,6 @@
 ---
 name: testing-typescript
-description: PnT testing rules for TypeScript / React (Jest, AAA, fixed time, mock only at boundaries). Use when adding or changing tests in TS.
+description: RDP testing rules for TypeScript / React (Jest, AAA, fixed time, mock only at boundaries). Use when adding or changing tests in TS.
 ---
 # Testing — TypeScript / React (Native)
 
@@ -36,7 +36,7 @@ What to read for:
 
 ## What gets a unit test, what doesn't
 
-Mirrors `.claude/pnt-standards.md` → "Testability":
+Mirrors `.claude/rdp-standards.md` → "Testability":
 
 - **Unit-test:** use cases, validators, entity methods, mappers (raw→DTO→entity), pure helpers. No real I/O — every boundary is a fake port injected into the use case.
 - **Don't unit-test:** the port implementations themselves (`SignalRStrategyRepository`, `ExpoSecureStorage`). They cross a boundary; cover them with integration tests against a test server / emulator, or accept they're thin enough to verify by inspection.

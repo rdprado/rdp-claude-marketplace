@@ -1,6 +1,6 @@
 ---
 name: pipelines
-description: "PnT CI/CD rules: Bitbucket pipelines, ci/ scripts, verify.sh, lint, deploys, NuGet feed and pipeline secrets. Use when touching CI/CD YAML, ci/ scripts, deploys or pipeline secrets."
+description: "RDP CI/CD rules: Bitbucket pipelines, ci/ scripts, verify.sh, lint, deploys, NuGet feed and pipeline secrets. Use when touching CI/CD YAML, ci/ scripts, deploys or pipeline secrets."
 ---
 # CI/CD pipelines
 

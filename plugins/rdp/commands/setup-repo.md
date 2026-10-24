@@ -1,7 +1,7 @@
 ---
-description: Once per project — helps you write or update CLAUDE.md with the PnT AI standards
+description: Once per project — helps you write or update CLAUDE.md with the RDP AI standards
 ---
-Set up this project with the PnT AI standards.
+Set up this project with the RDP AI standards.
 
 0. Print the text below first, exactly as written, in a code block, then a
    blank line:
@@ -16,9 +16,9 @@ Set up this project with the PnT AI standards.
    again." and stop.
    Then pick the case and say it in one line:
    - **New setup:** no `CLAUDE.md`. Run steps 2–8.
-   - **Existing CLAUDE.md, never set up:** `CLAUDE.md` has no PnT block. Run steps
+   - **Existing CLAUDE.md, never set up:** `CLAUDE.md` has no RDP block. Run steps
      2–8; step 3 merges into the file instead of copying the template.
-   - **Already set up (sync):** `CLAUDE.md` has the PnT block. Run steps 2–8 in sync
+   - **Already set up (sync):** `CLAUDE.md` has the RDP block. Run steps 2–8 in sync
      mode: bring the project up to date with the current templates and fill what is
      missing, without redoing what is already there:
      - Step 2: for each answer already in the Project profile (legacy, stack, GitHub repo,
@@ -33,11 +33,11 @@ Set up this project with the PnT AI standards.
        - GitHub repo: rdprado/stimulus-app (where story issues are created)
        - Tag: [MarketPlaceExperimentation] (prefix of every issue title)
        - GitHub mapping: rdprado/stimulus-app · docs/ · no project board
-       - PnT standards: up to date (2.11.1)
+       - RDP standards: up to date (2.11.1)
        Still to fill: Stack, Git flow, Docs, Sonar, Build commands
        ```
      - Step 3: compare `CLAUDE.md` with the matching template (see step 3).
-     - Step 4: compare `.claude/pnt-standards.md` and the PnT block with
+     - Step 4: compare `.claude/rdp-standards.md` and the RDP block with
        `${CLAUDE_PLUGIN_ROOT}/templates/` (see step 4).
      - Steps 5–6 as written (both skip what is already done).
      - Step 7: list what changed. Suggest `/init` only if the stack, layout or
@@ -67,18 +67,18 @@ Set up this project with the PnT AI standards.
    `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.project.md` (not legacy) to the
    project root as `CLAUDE.md`, filling in the GitHub repo and the tag.
    If it already has one: never overwrite it. Compare it with the matching
-   template and show me what's missing (the PnT block, Project profile
+   template and show me what's missing (the RDP block, Project profile
    lines, sections, ...) and which lines still hold placeholders (`<...>`).
    For each placeholder, fill it from the files (e.g. stack from `.csproj`,
    build commands, Sonar key from `ci/verify.sh`) and show it, or ask; if it
    doesn't apply yet (e.g. no CI), suggest `N/A`. Add only what I approve: the
-   PnT block at the top, missing sections below it, leaving everything already
-   there untouched. If something there contradicts the PnT rules (e.g. plans
+   RDP block at the top, missing sections below it, leaving everything already
+   there untouched. If something there contradicts the RDP rules (e.g. plans
    kept in a local file, a task journal), point it out and let me decide.
-4. PnT standards. If `.claude/pnt-standards.md` doesn't exist, copy
-   `${CLAUDE_PLUGIN_ROOT}/templates/pnt-standards.md` there (the PnT block
-   imports it with `@.claude/pnt-standards.md`). If it exists and differs from
-   the template (or the PnT block differs), say "The PnT standards in this
+4. RDP standards. If `.claude/rdp-standards.md` doesn't exist, copy
+   `${CLAUDE_PLUGIN_ROOT}/templates/rdp-standards.md` there (the RDP block
+   imports it with `@.claude/rdp-standards.md`). If it exists and differs from
+   the template (or the RDP block differs), say "The RDP standards in this
    project are out of date", list the changes in a few lines, and ask before
    replacing them.
 5. TypeScript/JavaScript tools (only if the stack includes TypeScript or JavaScript). Two tools by Uncle Bob,
@@ -122,8 +122,8 @@ Set up this project with the PnT AI standards.
 
    Values asked to the developer are marked as such.
 7. Say what was done, then tell me to run `/init` now: it fills in the
-   stack, the layout and the build commands below the PnT block and the
-   Project profile. Then `CLAUDE.md` and `.claude/pnt-standards.md` must be
+   stack, the layout and the build commands below the RDP block and the
+   Project profile. Then `CLAUDE.md` and `.claude/rdp-standards.md` must be
    committed.
 8. Finish ready for a context clear: everything decided in this conversation
    must already be in the files (nothing left only in chat). End with:

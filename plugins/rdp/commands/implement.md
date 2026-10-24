@@ -28,10 +28,10 @@ on the lines below it.
    Ask "Run Sonar analysis? [Y/n]" once, for the whole run (default: run it). For
    config/docs-only stories say so and suggest skipping. Then stop and wait for my "go".
    Do nothing — no GitHub issue change, no git command — before that.
-0.5. Check the PnT standards, once: if the project's `CLAUDE.md` has no PnT
+0.5. Check the RDP standards, once: if the project's `CLAUDE.md` has no RDP
    block, suggest `/rdp:setup-repo` and go on. Otherwise compare
-   `.claude/pnt-standards.md` and the PnT block with
-   `${CLAUDE_PLUGIN_ROOT}/templates/`; if they differ, say "The PnT standards
+   `.claude/rdp-standards.md` and the RDP block with
+   `${CLAUDE_PLUGIN_ROOT}/templates/`; if they differ, say "The RDP standards
    in this project are out of date", list the changes in a few lines and
    offer to update them (then they must be committed). If they match, say
    nothing.
@@ -60,7 +60,7 @@ on the lines below it.
    and the IDE to open (Visual Studio with the `.sln` for C# repos, VS Code otherwise).
 3. Implement each story.
    - Read the guidelines first: the story's own, plus the skills from the table in
-     `.claude/pnt-standards.md` that match the work (`testing` for any test, `git-flow` before
+     `.claude/rdp-standards.md` that match the work (`testing` for any test, `git-flow` before
      any branch/commit/push).
    - Before coding, if the story leaves something open that blocks the work, ask me **one
      question at a time**, saying in one line what each answer changes; what I can't answer

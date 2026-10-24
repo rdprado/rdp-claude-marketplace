@@ -1,6 +1,6 @@
 ---
 name: github-issues
-description: "PnT rules for GitHub issues and the repo docs: GitHub issues as source of truth, issue tags, issue comments, descriptions, finding a project's repo, docs/ searches and page writes. Use when reading or writing GitHub issues or the docs/ pages, or when looking up a project's repo."
+description: "RDP rules for GitHub issues and the repo docs: GitHub issues as source of truth, issue tags, issue comments, descriptions, finding a project's repo, docs/ searches and page writes. Use when reading or writing GitHub issues or the docs/ pages, or when looking up a project's repo."
 ---
 # GitHub issues and docs
 

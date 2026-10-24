@@ -1,6 +1,6 @@
 ---
 name: sonar
-description: How PnT runs Sonar locally and reads the quality gate and issues. Use when running ci/verify.sh, reading a Sonar result, or touching Sonar config.
+description: How RDP runs Sonar locally and reads the quality gate and issues. Use when running ci/verify.sh, reading a Sonar result, or touching Sonar config.
 ---
 # Sonar
 
