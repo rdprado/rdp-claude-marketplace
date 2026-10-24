@@ -14,13 +14,34 @@ Set up this project with the PnT AI standards.
 1. Ask: "Is <current folder> the project you want to set up?" If not, say:
    "Go to the project's folder, start Claude there and run /rdp:setup-repo
    again." and stop.
-   If the project's `CLAUDE.md` already has the PnT block, it is set up:
-   only check the PnT standards (compare `.claude/pnt-standards.md` and the
-   PnT block with `${CLAUDE_PLUGIN_ROOT}/templates/`). If they differ, say
-   "The PnT standards in this project are out of date", list the changes
-   in a few lines, and offer to update them (then they must be committed).
-   Then, if the stack includes TypeScript or JavaScript, run step 5 (it asks
-   before installing). Either way, stop there.
+   Then pick the case and say it in one line:
+   - **New setup:** no `CLAUDE.md`. Run steps 2–8.
+   - **Existing CLAUDE.md, never set up:** `CLAUDE.md` has no PnT block. Run steps
+     2–8; step 3 merges into the file instead of copying the template.
+   - **Already set up (sync):** `CLAUDE.md` has the PnT block. Run steps 2–8 in sync
+     mode: bring the project up to date with the current templates and fill what is
+     missing, without redoing what is already there:
+     - Step 2: for each answer already in the Project profile (legacy, stack, GitHub repo,
+       tag), re-detect it from the files and keep it if it still matches.
+       Ask only for placeholders (`<...>`) and for values that no longer match the
+       files (e.g. profile says .NET but `package.json` now exists too).
+       Before asking anything, show what is kept, with each value and one line on
+       what it is, e.g.:
+       ```
+       Kept (already set):
+       - Legacy: NO (modern project, clean architecture)
+       - GitHub repo: rdprado/stimulus-app (where story issues are created)
+       - Tag: [MarketPlaceExperimentation] (prefix of every issue title)
+       - GitHub mapping: rdprado/stimulus-app · docs/ · no project board
+       - PnT standards: up to date (2.11.1)
+       Still to fill: Stack, Git flow, Docs, Sonar, Build commands
+       ```
+     - Step 3: compare `CLAUDE.md` with the matching template (see step 3).
+     - Step 4: compare `.claude/pnt-standards.md` and the PnT block with
+       `${CLAUDE_PLUGIN_ROOT}/templates/` (see step 4).
+     - Steps 5–6 as written (both skip what is already done).
+     - Step 7: list what changed. Suggest `/init` only if the stack, layout or
+       build commands are still placeholders.
 2. Ask, one at a time, and always give a suggestion the developer can accept
    or change:
    - Modern or legacy. Modern is the default; legacy is the exception. Explain in one
@@ -47,13 +68,19 @@ Set up this project with the PnT AI standards.
    project root as `CLAUDE.md`, filling in the GitHub repo and the tag.
    If it already has one: never overwrite it. Compare it with the matching
    template and show me what's missing (the PnT block, Project profile
-   lines, ...). Add only what I approve: the PnT block at the
-   top, missing sections below it, leaving everything already there
-   untouched. If something there contradicts the PnT rules (e.g. plans kept
-   in a local file), point it out and let me decide.
-4. Copy `${CLAUDE_PLUGIN_ROOT}/templates/pnt-standards.md` to
-   `.claude/pnt-standards.md` (the PnT block imports it with
-   `@.claude/pnt-standards.md`).
+   lines, sections, ...) and which lines still hold placeholders (`<...>`).
+   For each placeholder, fill it from the files (e.g. stack from `.csproj`,
+   build commands, Sonar key from `ci/verify.sh`) and show it, or ask; if it
+   doesn't apply yet (e.g. no CI), suggest `N/A`. Add only what I approve: the
+   PnT block at the top, missing sections below it, leaving everything already
+   there untouched. If something there contradicts the PnT rules (e.g. plans
+   kept in a local file, a task journal), point it out and let me decide.
+4. PnT standards. If `.claude/pnt-standards.md` doesn't exist, copy
+   `${CLAUDE_PLUGIN_ROOT}/templates/pnt-standards.md` there (the PnT block
+   imports it with `@.claude/pnt-standards.md`). If it exists and differs from
+   the template (or the PnT block differs), say "The PnT standards in this
+   project are out of date", list the changes in a few lines, and ask before
+   replacing them.
 5. TypeScript/JavaScript tools (only if the stack includes TypeScript or JavaScript). Two tools by Uncle Bob,
    installed once per machine in one Python environment, `$HOME\.venvs\pnt-tools`:
    `dryer` (finds duplicated code) and `crapper` (CRAP score: complexity × missing test
@@ -98,3 +125,7 @@ Set up this project with the PnT AI standards.
    stack, the layout and the build commands below the PnT block and the
    Project profile. Then `CLAUDE.md` and `.claude/pnt-standards.md` must be
    committed.
+8. Finish ready for a context clear: everything decided in this conversation
+   must already be in the files (nothing left only in chat). End with:
+   "Setup done. If you're going to start working on the project now, I
+   recommend clearing the context first (`/clear`), so the AI works at its peak."

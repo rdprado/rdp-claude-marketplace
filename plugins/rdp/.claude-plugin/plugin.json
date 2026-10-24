@@ -1,7 +1,7 @@
 {
   "name": "rdp",
   "description": "PnT AI standards: /rdp:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
-  "version": "2.10.1",
+  "version": "2.11.2",
   "author": {
     "name": "PnT Engineering"
   }
