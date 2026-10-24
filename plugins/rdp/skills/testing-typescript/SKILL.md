@@ -178,7 +178,7 @@ it('shows the validation message when submit fails', async () => {
 - Entity invariant methods (`canBeCancelled`, etc.) have a test per branch.
 - Mappers have a round-trip / known-input test.
 
-When adding tests to a project with low coverage, start with use cases and validators — that is where business risk concentrates, and they are pure functions with injected ports, so they're cheap to cover.
+When adding tests to a project with low coverage, start with use cases and validators — that is where business risk concentrates, and they take their ports through the constructor, so they're cheap to cover with fakes.
 
 ## Don't
 

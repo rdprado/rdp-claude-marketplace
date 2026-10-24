@@ -6,6 +6,17 @@ description: RDP rules for TypeScript / React / React Native — language, React
 
 How we structure React and React Native projects in TypeScript. This is the TS counterpart of the `clean-architecture` skill (.NET) — same layering and dependency rules, idiomatic TS shapes.
 
+> **The framework never dictates a pattern from the use case inward.**
+> React, Svelte, Expo, a BFF — they live only in the Interface Adapters ring. From the use case
+> on (use cases, ports, entities, infrastructure), the shapes are ours and match the .NET skill:
+> an interface plus a class, dependencies through the constructor. A page or endpoint calls the
+> use case **through its interface** and never does `new`; the only `new` lives in the
+> composition root. Framework fashion (hooks, function-everything) stops at the adapter.
+>
+> Updated on 24/10/2026 and recommended by RDP. Some existing projects are organized differently
+> (e.g. use cases as plain functions); new code follows this shape, and old code moves toward it
+> when touched.
+
 ## TypeScript language
 
 - No `any`. Use `unknown` and narrow, or define a real type. Reserve `any` for genuinely untyped seams (a partial test fake), cast narrowly, never blanket a whole module.
@@ -56,14 +67,15 @@ Innermost to outermost. **Dependencies point inward.** Inner layers never import
 | Infrastructure (EF, clients) | `infrastructure/` — SDK wrappers; data-access under `infrastructure/data/` |
 | Entry / Presentation (controllers) | `interface-adapters/` — screens, components, hooks, stores + entry (`app/` routes) |
 | `OutputStatus` / `ValidationResult` | `Result<T>` discriminated union / `ValidationResult` |
-| DI extension methods | Composition root + React Context (see below) |
+| Use case interface + `sealed class`, constructor injection | Use case `interface` + `class`, constructor injection |
+| DI extension methods | Composition root, hand-written (Pure DI); framework only delivers it (see below) |
 
 ## Design rules
 
 Testability:
 
 - Code must be unit-testable. Anything that crosses a boundary — DB, HTTP, filesystem, clock, third-party SDK, framework API — lives behind an interface and is injected via the constructor.
-- The implementations of those boundary interfaces (EF repositories, HTTP clients, framework adapters) don't need unit tests; they're covered by integration tests. Everything else — use cases, validators, mappers, domain rules — must be unit-testable without spinning up a framework or touching real tech.
+- The implementations of those boundary interfaces (HTTP clients, storage, framework adapters) don't need unit tests; they're covered by integration tests. Everything else — use cases, validators, mappers, domain rules — must be unit-testable without spinning up a framework or touching real tech.
 
 Data and types:
 
@@ -84,7 +96,7 @@ src/
 ├── application/                    # application business rules (sibling of entities)
 │   ├── use-cases/
 │   │   └── createTwapStrategy/
-│   │       ├── createTwapStrategy.ts            # Input, Output, use case fn
+│   │       ├── createTwapStrategy.ts            # Input, Output, interface, use case class
 │   │       └── createTwapStrategy.validator.ts  # validator (colocated)
 │   ├── ports/                      # StrategyRepository, Clock, SecureStorage (interfaces)
 │   └── common/                     # Result, OutputStatus, ValidationResult
@@ -146,10 +158,11 @@ export class Strategy {
 
 One feature = one folder. Two files inside, mirroring the .NET layout:
 
-- `<feature>.ts` — `Input` type, `Output` type, and the use case implementation.
+- `<feature>.ts` — `Input` type, `Output` type, the use case interface and the use case class.
 - `<feature>.validator.ts` — the validator function alone (colocated, still part of the Application layer).
 
-A use case is a **function that receives its dependencies (ports) explicitly** — this is the TS equivalent of constructor injection and is what makes it unit-testable without a framework.
+A use case is an **interface plus a class**, exactly like .NET: the ports it needs come in through
+the constructor, and `execute(input)` runs it. Callers depend on the interface only.
 
 ```ts
 // application/use-cases/listUserCustomColors/listUserCustomColors.ts
@@ -167,25 +180,30 @@ export type ListUserCustomColorsOutput = {
   readonly colors: readonly string[];
 };
 
-// ---------- Dependencies (ports) ----------
-export type ListUserCustomColorsDeps = {
-  readonly repo: UserCustomDefinitionRepository;
-};
+// ---------- Interface ----------
+export interface ListUserCustomColorsUseCase {
+  execute(input: ListUserCustomColorsInput): Promise<Result<ListUserCustomColorsOutput>>;
+}
 
-// ---------- Use case ----------
-export async function listUserCustomColors(
-  input: ListUserCustomColorsInput,
-  { repo }: ListUserCustomColorsDeps
-): Promise<Result<ListUserCustomColorsOutput>> {
-  const validation = validateListUserCustomColors(input);
-  if (!validation.isValid) {
-    return Result.validation(validation.errorMessage); // narrowed: no `!` needed
+// ---------- UseCase ----------
+export class ListUserCustomColors implements ListUserCustomColorsUseCase {
+  constructor(private readonly repo: UserCustomDefinitionRepository) {}
+
+  async execute(input: ListUserCustomColorsInput): Promise<Result<ListUserCustomColorsOutput>> {
+    const validation = validateListUserCustomColors(input);
+    if (!validation.isValid) {
+      return Result.validation(validation.errorMessage); // narrowed: no `!` needed
+    }
+
+    const colors = await this.repo.listColorsByUser(input.userId);
+    return Result.success({ colors });
   }
-
-  const colors = await repo.listColorsByUser(input.userId);
-  return Result.success({ colors });
 }
 ```
+
+- Always call it through the instance: `useCase.execute(input)`. Never pass `useCase.execute`
+  loose as a callback (`onClick={useCase.execute}`): `this` is lost. Wrap it in an arrow.
+- Validators and pure business rules stay functions (they hold no dependencies).
 
 ```ts
 // application/use-cases/listUserCustomColors/listUserCustomColors.validator.ts
@@ -200,7 +218,21 @@ export function validateListUserCustomColors(input: ListUserCustomColorsInput): 
 }
 ```
 
-> Why functions and not classes for use cases? In TS, a function with an explicit deps argument is the most direct, mockable form — no DI container needed, trivial to call from a test with fake ports. Use a class only if a use case genuinely holds state across calls (rare).
+### Why classes, not functions
+
+The TS/React community often writes use cases as plain functions (`fn(input, deps)`), and says
+"class only if stateful". We don't, on purpose:
+
+- **The framework doesn't decide.** "Functions everywhere" is React/hooks culture. It belongs to
+  the adapter ring; from the use case inward we follow clean architecture, not the UI library.
+- **One model across languages.** A use case reads the same in C# and TS: interface, class,
+  constructor, `execute`. Moving between the server and the client costs nothing.
+- **The interface is the boundary.** Uncle Bob's use case is an Interactor behind an input port.
+  The page depends on that interface, so a test or another screen can swap it.
+- **No cost.** No performance difference (methods live on the prototype; use cases are built
+  once), no Sonar rule against it, and about the same number of lines.
+
+Both styles are valid clean architecture; this is our choice so every RDP project looks the same.
 
 ## Result, not exceptions
 
@@ -310,7 +342,7 @@ export function useCreateTwap() {
 
   const submit = useCallback(
     async (input: CreateTwapInput) => {
-      const result = await createTwapStrategy(input);
+      const result = await createTwapStrategy.execute(input); // the interface, never `new`
       switch (result.status) {
         case 'success':
           return true;
@@ -332,26 +364,36 @@ The `switch` has no `default` — TypeScript flags it if a new `OutputStatus` is
 
 ## Dependency injection
 
-TS/React has no DI container by default, and we don't add one. Two idiomatic mechanisms, both honoring `.claude/rdp-standards.md` ("prefer injection over globals"):
+Two links, same as .NET:
 
-1. **Composition root** — a single module that constructs the concrete implementations and binds them to use cases. This is the TS equivalent of the .NET `AddApplication()/AddInfrastructure()` extension methods.
+- **Use case ← ports:** the repositories and tech (HTTP, storage, clock) come in through the
+  use case constructor, typed as port interfaces.
+- **Page / endpoint → use case:** it gets the use case **interface** and calls `execute`. It never
+  does `new` and never imports the class.
+
+The only `new` lives in the **composition root**, a plain module written by hand (Pure DI). It is
+the TS equivalent of the .NET `AddApplication()/AddInfrastructure()` calls, and it is typed: a
+missing dependency fails at compile time.
 
 ```ts
 // composition/container.ts
 export function buildContainer() {
-  const secureStorage = new ExpoSecureStorage();
   const strategyRepo = new SignalRStrategyRepository(/* ... */);
-  const clock: Clock = { now: () => new Date() };
+  const clock: Clock = new SystemClock();
 
   return {
-    createTwapStrategy: (input: CreateTwapInput) =>
-      createTwapStrategy(input, { repo: strategyRepo, clock }),
-    // ...one entry per use case
+    createTwapStrategy: new CreateTwapStrategy(strategyRepo, clock) as CreateTwapStrategyUseCase,
+    // ...one entry per use case, typed as its interface
   };
 }
 ```
 
-2. **React Context** provides the container to the tree; `useUseCases()` reads it.
+We don't add a DI container library. TS erases types at runtime, so autowiring containers
+(tsyringe, InversifyJS) need decorators and metadata that don't work with esbuild/Vite; Pure DI
+needs nothing. The framework only **delivers** the container to the adapters: React Context, Svelte
+`setContext`/`getContext`, or `event.locals` on a SvelteKit server.
+
+React Context provides the container to the tree; `useUseCases()` reads it.
 
 ```tsx
 const UseCasesContext = createContext<ReturnType<typeof buildContainer> | null>(null);
@@ -362,7 +404,7 @@ export const useUseCases = () => {
 };
 ```
 
-> Tests never touch the container. They call the use case function directly with fake ports — that's the whole point of explicit deps.
+> Tests never touch the container. They do `new CreateTwapStrategy(fakeRepo, fakeClock)` and call `execute` — that's the whole point of constructor injection.
 
 ## Don't
 
@@ -375,6 +417,8 @@ export const useUseCases = () => {
 - Don't create a `utils/` or `common/` dumping ground for misfit code. If a helper reasons about an entity's invariants, put it on the entity. If it touches IO/framework/serialization/time, define a port and implement it in `infrastructure/`. "I need a place for this helper" is a smell — find its real home.
 - Don't return raw API DTOs to components. Map to an entity or a view model in `infrastructure/data/`.
 - Don't add a DI container library. The composition root + Context is enough.
+- Don't `new` a use case, repository or SDK wrapper outside the composition root (tests excepted). Pages and endpoints get the interface.
+- Don't let the framework's style shape use cases, ports or entities (e.g. use cases as hooks or bare functions). Interface + class, constructor injection.
 
 ## Avoid duplicated business rules
 
