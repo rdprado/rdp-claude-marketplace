@@ -9,7 +9,7 @@
 # runs in CI. Run it from inside the project repo:
 #
 #   ${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh \
-#     --jira OMNI-1234 --title "add order status webhook" \
+#     --issue 1234 --title "add order status webhook" \
 #     --summary-file .claude/tmp/pr-summary.md \
 #     --testing-file .claude/tmp/pr-testing.md \
 #     --sonar-file   .claude/tmp/pr-sonar.md \
@@ -20,7 +20,7 @@
 # hand out for this. Pasting into the browser keeps PR creation token-free.
 set -euo pipefail
 
-JIRA_KEY=""
+ISSUE_NUMBER=""
 TITLE=""
 SUMMARY_FILE=""
 TESTING_FILE=""
@@ -38,7 +38,7 @@ main() {
   require_pushed "$source_branch"
 
   description="$(write_description)"
-  pr_title="$JIRA_KEY: $TITLE"
+  pr_title="#$ISSUE_NUMBER: $TITLE"
   url="https://bitbucket.org/$workspace_repo/pull-requests/new?source=$source_branch&dest=$DESTINATION"
 
   if copy_to_clipboard <<<"$description"; then
@@ -70,7 +70,7 @@ usage() {
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --jira) JIRA_KEY="$2"; shift ;;
+      --issue) ISSUE_NUMBER="$2"; shift ;;
       --title) TITLE="$2"; shift ;;
       --summary-file) SUMMARY_FILE="$2"; shift ;;
       --testing-file) TESTING_FILE="$2"; shift ;;
@@ -85,7 +85,7 @@ parse_args() {
   done
 
   local missing=()
-  [[ -n "$JIRA_KEY" ]] || missing+=(--jira)
+  [[ -n "$ISSUE_NUMBER" ]] || missing+=(--issue)
   [[ -n "$TITLE" ]] || missing+=(--title)
   [[ -n "$SUMMARY_FILE" ]] || missing+=(--summary-file)
   [[ -n "$TESTING_FILE" ]] || missing+=(--testing-file)
@@ -94,8 +94,8 @@ parse_args() {
     echo "open-pr: missing ${missing[*]}" >&2
     exit 2
   fi
-  if [[ ! "$JIRA_KEY" =~ ^[A-Z][A-Z0-9]+-[0-9]+$ ]]; then
-    echo "open-pr: --jira must be a Jira key like OMNI-1234 (got '$JIRA_KEY')." >&2
+  if [[ ! "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "open-pr: --issue must be a GitHub issue number like 1234 (got '$ISSUE_NUMBER')." >&2
     exit 2
   fi
   local f
@@ -129,7 +129,8 @@ require_pushed() {
 
 # The team PR template.
 write_description() {
-  printf '## Jira\n[%s](https://plugntrade.atlassian.net/browse/%s)\n\n' "$JIRA_KEY" "$JIRA_KEY"
+  # "Refs", not "Closes": closing the issue stays human.
+  printf '## Issue\nRefs #%s\n\n' "$ISSUE_NUMBER"
   # Tests first: the reviewer reads what each test protects (and does not prove) before the code.
   printf '## Tests (review these first)\n'
   cat "$TESTING_FILE"

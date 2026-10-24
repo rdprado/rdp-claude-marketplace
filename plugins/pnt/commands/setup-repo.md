@@ -19,7 +19,8 @@ Set up this project with the PnT AI standards.
    PnT block with `${CLAUDE_PLUGIN_ROOT}/templates/`). If they differ, say
    "The PnT standards in this project are out of date", list the changes
    in a few lines, and offer to update them (then they must be committed).
-   Either way, stop there.
+   Then, if the stack includes TypeScript or JavaScript, run step 5 (it asks
+   before installing). Either way, stop there.
 2. Ask, one at a time, and always give a suggestion the developer can accept
    or change:
    - Modern or legacy. Modern is the default; legacy is the exception. Explain in one
@@ -34,19 +35,16 @@ Set up this project with the PnT AI standards.
    - Stack: .NET, TypeScript/JavaScript, or both. Detect it (`.csproj` → .NET;
      `tsconfig.json` or `package.json` → TypeScript/JavaScript) and say what you found.
      If the folder has no project files yet, ask.
-   - Jira project key. Use the `claude.ai Atlassian MCP` server: call
-     `mcp__claude_ai_Atlassian_MCP__executeRead` with `name: "listJiraProjects"`,
-     `cloudId` (top-level) and `inputs: {}`. Call it directly, without `discover`.
-     Show the key and name of every project and let me pick. Never use
-     `getVisibleJiraProjects` (other server): it returns avatars and is about 40 times
-     larger. If the server is not connected, ask me for the key.
-   - Tag (e.g. `[WebBroker]`): the prefix of every issue title in that Jira
-     project. Suggest it from the folder name, in the same form as the key's
-     project name.
+   - GitHub repo (`owner/repo`). Detect it with `gh repo view --json nameWithOwner`
+     (falls back to the `origin` remote URL) and let me confirm or change it. If `gh`
+     is not installed or not logged in, ask me for it.
+   - Tag (e.g. `[WebBroker]`): the prefix of every issue title in that GitHub
+     repo. Suggest it from the folder name, in the same form as the repo's
+     name.
 3. If the project has no `CLAUDE.md`: copy
    `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.legacy.md` (legacy) or
    `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.project.md` (not legacy) to the
-   project root as `CLAUDE.md`, filling in the Jira key and the tag.
+   project root as `CLAUDE.md`, filling in the GitHub repo and the tag.
    If it already has one: never overwrite it. Compare it with the matching
    template and show me what's missing (the PnT block, Project profile
    lines, ...). Add only what I approve: the PnT block at the
@@ -59,7 +57,9 @@ Set up this project with the PnT AI standards.
 5. TypeScript/JavaScript tools (only if the stack includes TypeScript or JavaScript). Two tools by Uncle Bob,
    installed once per machine in one Python environment, `$HOME\.venvs\pnt-tools`:
    `dryer` (finds duplicated code) and `crapper` (CRAP score: complexity × missing test
-   coverage, per function).
+   coverage, per function). .NET has none of these yet: Sonar is its only check.
+   A project can be .NET only, TypeScript/JavaScript only, or both. With both, offer
+   the tools for the TypeScript/JavaScript code; the .NET code stays on Sonar only.
    - Run every command in this step in PowerShell (not Bash).
    - Check them: `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m dryer --help` and
      `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m crapper --help`. If both run,
@@ -71,29 +71,26 @@ Set up this project with the PnT AI standards.
      $HOME\.venvs\pnt-tools\Scripts\pip install git+https://github.com/unclebob/dryer@66ff6d21a42c04afcad89c78a80066176d1294b0 git+https://github.com/unclebob/crapper@6fd92c4c9bcc56efb64a2f8743d5a2993bcfd42d
      ```
    - Add `.metrics/` to the project's `.gitignore` (both write their reports there).
-6. Atlassian mapping. Skip it if `CLAUDE.md` already has an `## Atlassian mapping`
+6. GitHub mapping. Skip it if `CLAUDE.md` already has a `## GitHub mapping`
    section (update it only if the developer asks).
-   - Confluence space: the space where this project's documentation lives (the
-     commands use it to find and update the project's pages). Take it from the
-     "Catálogo de Projetos" page in Confluence space `PI1` ("Pnt - Interno"). If the
-     catalog is unreachable or the project is not in it, ask in one line that says
-     what it is for, e.g. "In which Confluence space is this project's documentation?
-     The commands use it to find and update its pages. Suggestion: PI1."
-   - Board ID: don't ask. Use the `claude.ai Atlassian MCP` server: `executeRead` with
-     `name: "getJiraBoardSprintData"`, `inputs: {"projectKeyOrId": "<KEY>",
-     "includeIssues": false}` and `responseFields: ["board.id", "board.name",
-     "board.type"]`. If the project has no board, use `—`.
+   - Docs folder: the folder where this project's documentation lives (the
+     commands use it to find and update the project's pages). Detect it (`docs/`
+     at the repo root, or another folder of `.md` docs). If there is none, ask in
+     one line that says what it is for, e.g. "In which folder is this project's
+     documentation? The commands use it to find and update its pages. Suggestion: docs/."
+   - Project board: don't ask. Run `gh project list --owner <owner> --format json`
+     and take the board linked to this repo, if any. If the repo has no board, use `—`.
    - Write the table below the Project profile in `CLAUDE.md`, with the marker
      `<!-- schema: 1 -->`:
 
      ```markdown
-     ## Atlassian mapping
+     ## GitHub mapping
 
      <!-- schema: 1 -->
 
-     | Jira project | Confluence space | Board ID |
+     | GitHub repo | Docs folder | Project board |
      |---|---|---|
-     | OMNI | SO | 81 |
+     | rdprado/stimulus-app | docs/ | — |
      ```
 
    Values asked to the developer are marked as such.

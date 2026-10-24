@@ -19,6 +19,7 @@ Topic rules are skills in the `pnt` plugin. Before starting a task listed below,
 | Running `ci/verify.sh`, reading a Sonar quality gate or issues, or touching Sonar config | `sonar` | `sonar` |
 | Touching CI/CD YAML, `ci/` scripts, deploys, or pipeline secrets | `pipelines` | `pipelines` |
 | Committing, branching, or opening a PR | `git-flow` | `git-flow` |
+| Reading or writing GitHub issues or docs/ pages | `github-issues` | `github-issues` |
 
 ## Code style
 
@@ -84,18 +85,8 @@ Topic rules are skills in the `pnt` plugin. Before starting a task listed below,
 
 ## PnT commands
 
-Jira work uses the commands: `/pnt:story` (creates the story and its three subtasks), then `/pnt:implement <KEY> [<KEY> ...]` (several stories at once run in parallel, one branch and PR each); `/pnt:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
+Issue work uses the commands: `/pnt:story` (creates the story issue with its three-item checklist), then `/pnt:implement <#n> [<#n> ...]` (several stories at once run in parallel, one branch and PR each); `/pnt:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
 
-## Jira
+## GitHub issues and docs
 
-Jira is the single source of truth for plans and work status. Don't keep plans or progress in local files; temporary drafts go in `.claude/tmp/` (gitignored) and are deleted once written to Jira. If there is no ticket for the work, ask whether to create one.
-
-Each project `CLAUDE.md` names its Jira project key and the project's tag (`- Jira project: <KEY> — tag [<Project>]`); every issue for that project starts its title with the tag. Work history lives in git and in those Jira issues, never in `CLAUDE.md`. The project's status names, issue types and fields are read from Jira, never guessed. If Jira is unreachable, ask.
-
-## Internal documentation (Confluence)
-
-Internal systems are documented in Confluence **Pnt - Interno** (`PI1`), start page "Pnt - Interno": https://plugntrade.atlassian.net/wiki/spaces/PI1/overview. Start searches there. After a push or pull request, suggest the dev update the project's page there via the Atlassian connector.
-
-- The project catalog is the page "Catálogo de Projetos" in PI1. Check it first to find a project's repo. Catalog entries name the repo by its Bitbucket or SVN location, never a local path.
-- To read a repo's code, find its local clone by the repo name; if it isn't cloned, say so.
-- Confluence holds only basic, stable knowledge that will take a long time to change (what a system is, how it relates to others, history that is not in the code). Never put there what the repo already says (files, key lists, values, test details) or anything dynamic (ticket status, "story X will change Y", what is pending or unconfirmed): that goes in the code, tests, Jira or a repo/memory note.
+GitHub issues are the single source of truth for plans and work status; never keep plans or progress in local files. For any GitHub issue or docs/ work, load the `github-issues` skill.

@@ -240,3 +240,9 @@ Test class names mirror the use case or endpoint. One `Arrange / Act / Assert` p
 ## Avoid duplicated business rules
 
 Write each business rule once, in a rules class (Entities or Application, e.g. `BodyRecordRules.DateProblem`). Use cases and validators call it; never copy it. A client may repeat the check only to warn before sending, using the same test cases. Before writing an `if` for a rule, search whether it already exists.
+
+## Quality checks
+
+.NET has no `dryer` or `crapper` yet: Sonar is the only check (see the `pnt:sonar` skill).
+In a project with both .NET and TypeScript/JavaScript, `dryer` and `crapper` run only on
+the TypeScript/JavaScript code (see `pnt:clean-architecture-typescript`).

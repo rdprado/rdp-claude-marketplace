@@ -1,13 +1,13 @@
 ---
-description: Implement one or more Jira stories — in parallel, one branch and one PR each
+description: Implement one or more GitHub story issues — in parallel, one branch and one PR each
 ---
-Implement the Jira stor(ies) in $ARGUMENTS: one or more keys, e.g. `OMNI-1591` or
-`OMNI-1591 OMNI-1636`. The story is the unit of work (like a GitHub issue): one branch, one
-PR. Its three subtasks (Implementação, Testes, Deploy) are only its checklist, not separate
+Implement the GitHub stor(ies) in $ARGUMENTS: one or more issue numbers, e.g. `#1591` or
+`#1591 #1636`. The story is the unit of work: one branch, one
+PR. Its three checklist items (Implementação, Testes, Deploy) are only its checklist, not separate
 runs. With `--pair` I work one story step by step with you (see "Pair mode").
 
 Until this command is finished, start every reply with one line naming where
-we are, e.g. `/pnt:implement OMNI-1234 OMNI-1240 · verifying`.
+we are, e.g. `/pnt:implement #1234 #1240 · verifying`.
 
 Open with the line "Implementation mode: deliver" (or "pair") and the summary of step 0
 on the lines below it.
@@ -22,12 +22,12 @@ on the lines below it.
    own worktree). `verifier` (Haiku) runs the checks and summarizes them; I decide what they
    mean. You review in the PR, tests first. Say `--pair` and we go step by step instead."
    Check the folder this session started in: the project CLAUDE.md that is loaded is that
-   folder's, so if the repo you will change is a different one (catalog → clone), say so in one
+   folder's, so if the repo you will change is a different one (GitHub repo → clone), say so in one
    line and ask me to restart the session from that repo's folder (`cd <clone>` then `claude`).
    Don't start until I restart or tell you to go on from here.
    Ask "Run Sonar analysis? [Y/n]" once, for the whole run (default: run it). For
    config/docs-only stories say so and suggest skipping. Then stop and wait for my "go".
-   Do nothing — no Jira change, no git command — before that.
+   Do nothing — no GitHub issue change, no git command — before that.
 0.5. Check the PnT standards, once: if the project's `CLAUDE.md` has no PnT
    block, suggest `/pnt:setup-repo` and go on. Otherwise compare
    `.claude/pnt-standards.md` and the PnT block with
@@ -35,14 +35,15 @@ on the lines below it.
    in this project are out of date", list the changes in a few lines and
    offer to update them (then they must be committed). If they match, say
    nothing.
-1. Read each story from Jira (never from local files) and move it to the project's
-   in-progress status (from `getTransitionsForJiraIssue` on the story; ask if none fits). If the story has the three standard subtasks, move Implementação to
-   in-progress too; if it has other subtasks (older work), treat them as its checklist. Either
-   way it is one PR for the story. If there is no ticket for the work, ask me whether to create
+1. Read each story from GitHub with `gh issue view` (never from local files) and mark it
+   in progress with the repo's in-progress label (from `gh label list`; ask if none fits). If
+   the story has the standard three-item checklist, Implementação is the item now in progress;
+   if it has another checklist (older work), treat that as its checklist. Either
+   way it is one PR for the story. If there is no issue for the work, ask me whether to create
    one before naming a branch.
-2. For each story, before writing code: catalog → local clone → `git fetch` → show branch and
+2. For each story, before writing code: GitHub repo → local clone → `git fetch` → show branch and
    ahead/behind. Say in one line before touching anything: "I will work in <path>, on a new
-   branch `feature/<KEY>-<short-description>` (see the `git-flow` skill) from
+   branch `feature/<n>-<short-description>` (see the `git-flow` skill) from
    `origin/<default>`." Keep it current: `git pull --ff-only` the default branch before
    branching; a new branch starts from the freshly fetched `origin/<default>`; an existing
    work branch is switched to, and if it is behind `origin/<default>` merge it in (rebase
@@ -51,7 +52,7 @@ on the lines below it.
    - **Main tree first:** work in the repo's own clone unless a worktree clearly works
      better. Claude decides whether to create one (e.g. several stories at once on different
      files). Whenever it creates a worktree, it warns me first in one line: the reason, why the
-     main tree would not do, and the path `.claude/tmp/wt-<KEY>`. If the main tree works as
+     main tree would not do, and the path `.claude/tmp/wt-<n>`. If the main tree works as
      well, it uses that. Only stories that touch different files run at once; if two want the
      same files, run them one after the other and say so. A story spanning several repos gets
      one branch per repo.
@@ -83,10 +84,10 @@ on the lines below it.
    - **Something new comes up** (outside the story's scope): say in one line what it is and
      propose doing it in parallel. If it fits an open story, add it there; otherwise create a
      new story by running `/pnt:story` for it (in the background; it creates the story with its
-     three subtasks), and, if it is small and touches other files, implement it
+     three-item checklist), and, if it is small and touches other files, implement it
      at once on its own branch and worktree and bring its PR too. Never grow the current
      story with it. Never parallelize jobs that touch the same files.
-   - **Stories added mid-run:** I may give you more keys at any time ("add OMNI-1700"), or
+   - **Stories added mid-run:** I may give you more issue numbers at any time ("add #1700"), or
      stories created during the run may be added: start each one right away through steps 1–3
      (in parallel if it touches other files, otherwise after the one that owns those files, and
      say which), and include it in the report of step 7 with the others. No new `/pnt:implement`
@@ -124,18 +125,16 @@ on the lines below it.
    Bitbucket tools, so I create each PR in the browser: show me every title and link together
    and wait for me to paste back the PR URLs. Then post a summary comment on each story (what
    changed, how it was tested, Sonar result condition by condition, pre-existing debt I chose
-   to leave, PR link) and keep it in the in-progress status. If the story has the standard
-   subtasks: Implementação goes to done once the PR is created, Testes goes to done when its
-   checklist (the test types that exist) has run green, and Deploy stays open until the
+   to leave, PR link) and keep its in-progress label. If the story has the standard
+   checklist: tick Implementação once the PR is created, tick Testes when its
+   sub-checklist (the test types that exist) has run green, and Deploy stays open until the
    delivery. Delete the drafts in .claude/tmp/.
-9. Stop and wait. Only after I confirm a PR was approved, move that story to the project's
-   ready-for-test status (a single transition: do it directly). Remove its worktree once the
-   branch is pushed.
-10. If the Confluence catalog shows no intro for this project, offer to draft one from what was
-    learned, following "Modelo de Página de Projeto (Padrão)", plus the catalog entry if it's
-    missing. Only if I accept: write the draft to .claude/tmp/confluence-intro-<project>.md and
-    show it to me; publish to PI1 (as `Intro - <Projeto>`, and set the catalog entry's `Intro:`
-    line) only after my explicit approval. The intro covers what the system is and how it
+9. Stop and wait. Only after I confirm a PR was approved, swap that story's in-progress label
+   for the repo's ready-for-test label (a single label change: do it directly). Remove its
+   worktree once the branch is pushed.
+10. If the repo's docs folder has no intro for this project, offer to draft one from what was
+    learned. Only if I accept: write the draft to .claude/tmp/docs-intro-<project>.md and
+    show it to me; commit it to the docs folder (as `intro.md`) only after my explicit approval. The intro covers what the system is and how it
     relates to other projects — not how to work in the code (that stays in CLAUDE.md).
 
 ## Pair mode (`--pair`)
@@ -152,5 +151,5 @@ switch with `/model <name>` before "go" if it differs from this session's: **Son
 clear, well-specified story; **Opus** when it needs judgment (legacy code, the order path,
 money/state consequences, decisions still being made).
 
-Status names come from Jira (`getTransitionsForJiraIssue` on the story), never from memory.
+Status labels come from the repo (`gh label list`), never from memory.
 If none matches, ask me.

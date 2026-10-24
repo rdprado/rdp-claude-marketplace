@@ -16,8 +16,8 @@ Reference standards for branching, commits, and pull requests.
 
 - **`main`** — production. Release branches merge here when a release is done.
 - **`release/X.Y.x`** — long-lived per release cycle (e.g. `release/3.13.x`).
-- **`feature/<JIRA-KEY>-<short-description>`** — branched from a specific `release/X.Y.x`. When creating one, ask which release branch to base it on.
-- **`hotfix/<JIRA-KEY>-<short-description>`** — branched from `main` for urgent production fixes.
+- **`feature/<ISSUE-NUMBER>-<short-description>`** — branched from a specific `release/X.Y.x`. When creating one, ask which release branch to base it on.
+- **`hotfix/<ISSUE-NUMBER>-<short-description>`** — branched from `main` for urgent production fixes.
 
 PR targets:
 
@@ -32,9 +32,9 @@ PR targets:
 ## Flow B — GitHub Flow
 
 - **`main`** — always deployable. Production runs from `main`. Only long-lived branch.
-- **`feature/<JIRA-KEY>-<short-description>`** — short-lived, branched from `main`.
-- **`fix/<JIRA-KEY>-<short-description>`** — same as feature, for bugs.
-- **`hotfix/<JIRA-KEY>-<short-description>`** — urgent prod fix, branched from and merged back to `main`.
+- **`feature/<ISSUE-NUMBER>-<short-description>`** — short-lived, branched from `main`.
+- **`fix/<ISSUE-NUMBER>-<short-description>`** — same as feature, for bugs.
+- **`hotfix/<ISSUE-NUMBER>-<short-description>`** — urgent prod fix, branched from and merged back to `main`.
 
 Merge feature/fix branches into `main`. Delete the branch after merge.
 
@@ -42,25 +42,25 @@ Merge feature/fix branches into `main`. Delete the branch after merge.
 <!-- End flow blocks — sections below apply to either flow.              -->
 <!-- =================================================================== -->
 
-## Branch names and Jira
+## Branch names and GitHub issues
 
-Every branch name carries the Jira key in upper case, e.g. `feature/OMNI-1234-order-status-webhook`. Jira's development panel links branches, commits and PRs by that key — `/pnt:implement` relies on it. For work without a ticket, ask whether to create one before branching.
+Every branch name carries the GitHub issue number, e.g. `feature/1234-order-status-webhook`. GitHub links commits and PRs to the issue by `#1234` in their text — `/pnt:implement` relies on it. For work without an issue, ask whether to create one before branching.
 
 ## Pushing and opening PRs (Bitbucket)
 
 - Push: always `git push origin <branch>`. Never bare `git push`.
 - There's no `gh` equivalent, and the claude.ai Atlassian connector has no Bitbucket tools. Prepare PRs with **`${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh`** (in the `pnt` plugin): it fills the team template, copies the description to the clipboard and prints the "create PR" link — you create the PR in the browser. No token needed. Never put Bitbucket credentials inline or in a repo.
-- Put the Jira key at the start of the PR title: `OMNI-1234: add order status webhook`.
+- Put the issue number at the start of the PR title: `#1234: add order status webhook`.
 
 ## Commits
 
 - Small commits, in order, one logical change each. Each says why, what changed, and how it was checked.
 - Format: `<type>: <subject>` — types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - Subject: imperative mood, no trailing period.
-  - Good: `feat: OMNI-1234 add order status webhook handler`
+  - Good: `feat: #1234 add order status webhook handler`
   - Bad: `Added a new handler for the order status webhook`
 - Body (optional): wrap at 72 chars. Explain *why*, not what.
-- Put the Jira key in the subject, after the type: `feat: OMNI-1234 add order status webhook handler`. Jira links the commit to the story by that key.
+- Put the issue number in the subject, after the type: `feat: #1234 add order status webhook handler`. GitHub links the commit to the issue by that number.
 
 ## Pull requests
 

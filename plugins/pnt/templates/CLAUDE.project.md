@@ -21,8 +21,8 @@ Rules that apply: all PnT skills, including clean architecture. Tests are requir
 - Uses clean architecture: YES
 - Legacy: NO
 - Git flow: <A (release branches) / B (GitHub Flow)> — see the `git-flow` skill.
-- Jira project: `<KEY>` — tag `[<Project>]` (every issue title starts with it); statuses and fields are read from Jira.
-- Confluence page: <link to this project's Intro in PI1>
+- GitHub repo: `<owner/repo>` — tag `[<Project>]` (every issue title starts with it); labels and milestones are read from GitHub.
+- Docs: <path to this project's intro in docs/>
 
 ## Sonar
 
