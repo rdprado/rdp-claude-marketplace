@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: Use in /pnt:story to find and summarize the project's documentation in the repo's docs/ folder relevant to a story (services, integrations, environments, deployment, constraints).
+description: Use in /rdp:story to find and summarize the project's documentation in the repo's docs/ folder relevant to a story (services, integrations, environments, deployment, constraints).
 # Trial: compare against sonnet on the first stories; switch back if summaries miss important points.
 model: haiku
 tools: Read, Grep, Glob

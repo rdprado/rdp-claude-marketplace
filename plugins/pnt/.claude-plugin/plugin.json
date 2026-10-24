@@ -1,8 +1,0 @@
-{
-  "name": "pnt",
-  "description": "PnT AI standards: /pnt:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
-  "version": "2.10.1",
-  "author": {
-    "name": "PnT Engineering"
-  }
-}

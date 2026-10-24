@@ -7,7 +7,7 @@ PR. Its three checklist items (Implementação, Testes, Deploy) are only its che
 runs. With `--pair` I work one story step by step with you (see "Pair mode").
 
 Until this command is finished, start every reply with one line naming where
-we are, e.g. `/pnt:implement #1234 #1240 · verifying`.
+we are, e.g. `/rdp:implement #1234 #1240 · verifying`.
 
 Open with the line "Implementation mode: deliver" (or "pair") and the summary of step 0
 on the lines below it.
@@ -16,7 +16,7 @@ on the lines below it.
    future tense: which stories, which repo(s), which run in parallel and which one after
    another (and why), and that you will come back with the PRs ready and ask for my OK once
    before anything is committed or pushed. Then ask if it's my first time using
-   /pnt:implement. If yes, explain it in one short paragraph: "I implement each story on its
+   /rdp:implement. If yes, explain it in one short paragraph: "I implement each story on its
    own branch, run the checks, review the result and bring you a pull request per story.
    Stories that don't touch the same files run in parallel (`implementer` agents, each in its
    own worktree). `verifier` (Haiku) runs the checks and summarizes them; I decide what they
@@ -29,7 +29,7 @@ on the lines below it.
    config/docs-only stories say so and suggest skipping. Then stop and wait for my "go".
    Do nothing — no GitHub issue change, no git command — before that.
 0.5. Check the PnT standards, once: if the project's `CLAUDE.md` has no PnT
-   block, suggest `/pnt:setup-repo` and go on. Otherwise compare
+   block, suggest `/rdp:setup-repo` and go on. Otherwise compare
    `.claude/pnt-standards.md` and the PnT block with
    `${CLAUDE_PLUGIN_ROOT}/templates/`; if they differ, say "The PnT standards
    in this project are out of date", list the changes in a few lines and
@@ -83,14 +83,14 @@ on the lines below it.
      each one wrote against the guidelines before moving on.
    - **Something new comes up** (outside the story's scope): say in one line what it is and
      propose doing it in parallel. If it fits an open story, add it there; otherwise create a
-     new story by running `/pnt:story` for it (in the background; it creates the story with its
+     new story by running `/rdp:story` for it (in the background; it creates the story with its
      three-item checklist), and, if it is small and touches other files, implement it
      at once on its own branch and worktree and bring its PR too. Never grow the current
      story with it. Never parallelize jobs that touch the same files.
    - **Stories added mid-run:** I may give you more issue numbers at any time ("add #1700"), or
      stories created during the run may be added: start each one right away through steps 1–3
      (in parallel if it touches other files, otherwise after the one that owns those files, and
-     say which), and include it in the report of step 7 with the others. No new `/pnt:implement`
+     say which), and include it in the report of step 7 with the others. No new `/rdp:implement`
      needed.
 4. Verify, one `verifier` per story, in parallel. Pass it my Sonar answer from step 0 ("skip
    Sonar" only if I said no). If a failure persists after two fix attempts, call `debugger`.

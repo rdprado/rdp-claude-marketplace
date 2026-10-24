@@ -7,12 +7,12 @@ Set up this project with the PnT AI standards.
    blank line:
 
    ```
-   ░ PLUG       │ ▄▀▓ █
-   ░ AND TRADE  │ ▒▀▓ █
+   ░     │ ▄▀▓ █
+   ░ RDP │ ▒▀▓ █
    ```
 
 1. Ask: "Is <current folder> the project you want to set up?" If not, say:
-   "Go to the project's folder, start Claude there and run /pnt:setup-repo
+   "Go to the project's folder, start Claude there and run /rdp:setup-repo
    again." and stop.
    If the project's `CLAUDE.md` already has the PnT block, it is set up:
    only check the PnT standards (compare `.claude/pnt-standards.md` and the

@@ -395,4 +395,4 @@ Run both from the project root before finishing a change, in PowerShell (not Bas
   coverage the score is meaningless; don't use `--no-coverage` to judge.
 - If either one flags a problem in the code you changed, refactor before finishing (merge the
   duplicate; split or test the function), then run both again.
-- If the tools are not installed, offer to install them (commands in `/pnt:setup-repo`, step 5).
+- If the tools are not installed, offer to install them (commands in `/rdp:setup-repo`, step 5).

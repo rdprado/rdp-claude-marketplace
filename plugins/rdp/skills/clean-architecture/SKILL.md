@@ -243,6 +243,6 @@ Write each business rule once, in a rules class (Entities or Application, e.g. `
 
 ## Quality checks
 
-.NET has no `dryer` or `crapper` yet: Sonar is the only check (see the `pnt:sonar` skill).
+.NET has no `dryer` or `crapper` yet: Sonar is the only check (see the `rdp:sonar` skill).
 In a project with both .NET and TypeScript/JavaScript, `dryer` and `crapper` run only on
-the TypeScript/JavaScript code (see `pnt:clean-architecture-typescript`).
+the TypeScript/JavaScript code (see `rdp:clean-architecture-typescript`).

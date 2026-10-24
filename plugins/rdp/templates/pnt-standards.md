@@ -1,8 +1,8 @@
 # PnT AI standards
 
-<!-- Copied into each project by /pnt:setup-repo as .claude/pnt-standards.md and
+<!-- Copied into each project by /rdp:setup-repo as .claude/pnt-standards.md and
      refreshed by the PnT commands. Don't edit the copy: change it in
-     pnt-claude-marketplace (plugins/pnt/templates/pnt-standards.md). -->
+     pnt-claude-marketplace (plugins/rdp/templates/pnt-standards.md). -->
 
 Shared rules for every PnT project. When this file and the project's `CLAUDE.md` or `docs/architecture/` conflict, the project wins.
 
@@ -85,7 +85,7 @@ Topic rules are skills in the `pnt` plugin. Before starting a task listed below,
 
 ## PnT commands
 
-Issue work uses the commands: `/pnt:story` (creates the story issue with its three-item checklist), then `/pnt:implement <#n> [<#n> ...]` (several stories at once run in parallel, one branch and PR each); `/pnt:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
+Issue work uses the commands: `/rdp:story` (creates the story issue with its three-item checklist), then `/rdp:implement <#n> [<#n> ...]` (several stories at once run in parallel, one branch and PR each); `/rdp:help` lists them. If asked for that work outside one, suggest the matching command first. Questions, exploration and editing the standards need none.
 
 ## GitHub issues and docs
 

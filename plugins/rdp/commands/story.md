@@ -1,25 +1,25 @@
 ---
-description: Turn a rough idea into a GitHub story issue (what and why) with its three-item checklist — /pnt:implement does the how
+description: Turn a rough idea into a GitHub story issue (what and why) with its three-item checklist — /rdp:implement does the how
 ---
 Help me turn a rough idea into a story issue in the project's GitHub repo (repo
 from the project CLAUDE.md "GitHub repo" line). My first description of the idea
 may be in $ARGUMENTS. For every GitHub issue read or write, follow the `github-issues` skill.
 
 Until this command is finished, start every reply with one line naming where
-we are, e.g. `/pnt:story · step 2` (add the issue number once it exists).
+we are, e.g. `/rdp:story · step 2` (add the issue number once it exists).
 
 This command covers **what and why**. The technical solution belongs to
-/pnt:implement — describe the problem and the expected outcome, never the
+/rdp:implement — describe the problem and the expected outcome, never the
 implementation.
 
 0. Before anything else, show a 3–4 line summary of what will happen (we talk
    the idea through, you check the code, the docs and existing issues, show
    me a draft, and create it on GitHub only after my approval) and ask if it's my
-   first time using /pnt:story. If yes, explain in more detail — what you'll
+   first time using /rdp:story. If yes, explain in more detail — what you'll
    ask, what a good story needs, and what I can say ("that's out of scope",
    "split it", "approve") — before starting.
 0.5. Check the PnT standards, once, before the idea talk:
-   - If the project's `CLAUDE.md` has no PnT block, suggest `/pnt:setup-repo`
+   - If the project's `CLAUDE.md` has no PnT block, suggest `/rdp:setup-repo`
      and go on.
    - Otherwise compare `.claude/pnt-standards.md` and the PnT block with
      `${CLAUDE_PLUGIN_ROOT}/templates/`. If they differ, say "The PnT
@@ -99,7 +99,7 @@ implementation.
    - Read everything back (`gh issue view`) and check it matches what I approved.
    - If I chose the current iteration, add the issue to the project board and set its
      iteration (how: next step to define). If I chose the backlog, leave it there.
-   - Give me the number — ready for `/pnt:implement <#n>`.
+   - Give me the number — ready for `/rdp:implement <#n>`.
 
 The judgment calls — INVEST, readiness, whether an issue is a duplicate — are
 yours (the main session), not the subagents'. `explorer` and `researcher`

@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Use in /pnt:implement to implement one GitHub story issue in its own worktree when several stories run in parallel. A single story, or --pair mode, is implemented by the main session instead.
+description: Use in /rdp:implement to implement one GitHub story issue in its own worktree when several stories run in parallel. A single story, or --pair mode, is implemented by the main session instead.
 model: sonnet
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---

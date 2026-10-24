@@ -44,12 +44,12 @@ Merge feature/fix branches into `main`. Delete the branch after merge.
 
 ## Branch names and GitHub issues
 
-Every branch name carries the GitHub issue number, e.g. `feature/1234-order-status-webhook`. GitHub links commits and PRs to the issue by `#1234` in their text — `/pnt:implement` relies on it. For work without an issue, ask whether to create one before branching.
+Every branch name carries the GitHub issue number, e.g. `feature/1234-order-status-webhook`. GitHub links commits and PRs to the issue by `#1234` in their text — `/rdp:implement` relies on it. For work without an issue, ask whether to create one before branching.
 
 ## Pushing and opening PRs (Bitbucket)
 
 - Push: always `git push origin <branch>`. Never bare `git push`.
-- There's no `gh` equivalent, and the claude.ai Atlassian connector has no Bitbucket tools. Prepare PRs with **`${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh`** (in the `pnt` plugin): it fills the team template, copies the description to the clipboard and prints the "create PR" link — you create the PR in the browser. No token needed. Never put Bitbucket credentials inline or in a repo.
+- There's no `gh` equivalent, and the claude.ai Atlassian connector has no Bitbucket tools. Prepare PRs with **`${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh`** (in the `rdp` plugin): it fills the team template, copies the description to the clipboard and prints the "create PR" link — you create the PR in the browser. No token needed. Never put Bitbucket credentials inline or in a repo.
 - Put the issue number at the start of the PR title: `#1234: add order status webhook`.
 
 ## Commits

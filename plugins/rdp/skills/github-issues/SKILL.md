@@ -7,7 +7,7 @@ description: "PnT rules for GitHub issues and the repo docs: GitHub issues as so
 Use the `gh` CLI (`gh issue view/list/create/edit/comment`, `gh search issues`). Values for
 this project (GitHub repo, docs folder) are in the `## GitHub mapping` table of the project's
 `CLAUDE.md`; use them instead of guessing or asking again. If the table is missing, suggest
-`/pnt:setup-repo`.
+`/rdp:setup-repo`.
 
 ## GitHub issues
 

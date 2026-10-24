@@ -6,9 +6,9 @@
   "description": "Personal marketplace: the pnt plugin (AI standards, commands, agents, skills) and the pnt-mod band.",
   "plugins": [
     {
-      "name": "pnt",
-      "source": "./plugins/pnt",
-      "description": "PnT AI standards: /pnt:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
+      "name": "rdp",
+      "source": "./plugins/rdp",
+      "description": "PnT AI standards: /rdp:setup-repo and every PnT command keep each project's CLAUDE.md and .claude/pnt-standards.md current; the standards load as skills.",
       "category": "standards",
       "keywords": [
         "dotnet",

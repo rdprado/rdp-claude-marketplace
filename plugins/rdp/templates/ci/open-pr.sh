@@ -3,7 +3,7 @@
 # template: copies the description to the clipboard, prints it, and prints the
 # title and the Bitbucket "create PR" link. The developer creates the PR in the
 # browser. No token, no API call, no files written.
-# Used by /pnt:implement (main session) and by developers.
+# Used by /rdp:implement (main session) and by developers.
 #
 # Runs from the pnt plugin — it is NOT copied into projects and never
 # runs in CI. Run it from inside the project repo:

@@ -1,7 +1,7 @@
 # <project-name>
 
 <!-- Template for a project's CLAUDE.md, copied to the project root as CLAUDE.md
-     by /pnt:setup-repo. Keep this file to project specifics only, and never put
+     by /rdp:setup-repo. Keep this file to project specifics only, and never put
      absolute paths in it. When running /init, keep the PnT block and the
      "Project profile" block, and add below them only what is specific to
      this project.
@@ -9,7 +9,7 @@
      is optional: delete what doesn't apply (e.g. Sonar or Git flow in a project
      with no git/CI) or write "N/A" in its line. -->
 
-<!-- PnT block — written by /pnt:setup-repo, refreshed by the PnT commands. -->
+<!-- PnT block — written by /rdp:setup-repo, refreshed by the PnT commands. -->
 @.claude/pnt-standards.md
 
 Rules that apply: all PnT skills, including clean architecture. Tests are required.

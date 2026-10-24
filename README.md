@@ -2,7 +2,7 @@
 
 Personal Claude Code marketplace with two plugins, copied from the PnT marketplace:
 
-- `pnt` — AI standards, the `/pnt:*` commands, agents and skills.
+- `pnt` — AI standards, the `/rdp:*` commands, agents and skills.
 - `pnt-mod` — a band above the prompt with the context size and what the last prompt spent per agent.
 
 ## Install
@@ -13,4 +13,4 @@ Personal Claude Code marketplace with two plugins, copied from the PnT marketpla
 /plugin install pnt-mod@rdp-claude-marketplace
 ```
 
-Then run `/pnt:setup-repo` in a project.
+Then run `/rdp:setup-repo` in a project.
