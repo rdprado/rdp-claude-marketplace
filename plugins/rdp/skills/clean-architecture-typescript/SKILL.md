@@ -362,6 +362,33 @@ export function useCreateTwap() {
 
 The `switch` has no `default` — TypeScript flags it if a new `OutputStatus` is added and not handled here.
 
+## BFF (backend for frontend)
+
+When the app has its own backend API (e.g. .NET), the web front talks only to a BFF (SvelteKit
+server routes, Next.js route handlers) and the BFF talks to the API. Most web apps use one, for
+token security: the BFF holds identity and the token.
+
+- At sign-in the BFF gets the token from the API and keeps it in an HttpOnly + Secure + SameSite
+  cookie. Browser JavaScript never sees it.
+- On each call the BFF reads the cookie and calls the API with `Authorization: Bearer`.
+
+**The BFF has no business logic, so it has no use cases.** The controller calls the API port directly:
+
+```
+browser:  page → field validator (pure function, warning only)
+          page → TraineesClient (interface, via context) → HttpTraineesClient → /bff/...
+BFF:      +server.ts (1 line) → TraineesController (class) → BackendApi (interface) → HttpBackendApi → API
+```
+
+- If real logic shows up in the BFF (rules, decisions, orchestration of several calls), it moves to a
+  use case in the backend API, not to the BFF.
+- The BFF's jobs are adapter jobs: map the request, forward the auth cookie, map the API status to
+  HTTP.
+- The controller is a class that receives the port interface in its constructor, so it is testable
+  with a fake. The `+server.ts` file only hands off to it.
+- Field validators in the browser only warn before sending. The API validates for real, and both
+  sides use the same test cases.
+
 ## Dependency injection
 
 Two links, same as .NET:
