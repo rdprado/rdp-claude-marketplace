@@ -263,17 +263,20 @@ export type Result<T> =
   | { readonly status: 'success'; readonly value: T }
   | { readonly status: 'notFound'; readonly error: string }
   | { readonly status: 'validation'; readonly error: string; readonly fields?: FieldErrors }
-  | { readonly status: 'conflict'; readonly error: string };
+  | { readonly status: 'conflict'; readonly error: string; readonly details?: unknown };
 
 export const Result = {
   success: <T>(value: T): Result<T> => ({ status: 'success', value }),
   notFound: <T>(error: string): Result<T> => ({ status: 'notFound', error }),
   validation: <T>(error: string, fields?: FieldErrors): Result<T> => ({ status: 'validation', error, fields }),
-  conflict: <T>(error: string): Result<T> => ({ status: 'conflict', error }),
+  conflict: <T>(error: string, details?: unknown): Result<T> => ({ status: 'conflict', error, details }),
 };
 ```
 
 `fields` carries per-field messages when the API sends them (`{ email: 'already taken' }`), so the screen can show each one under its field.
+
+`details` carries the body of a conflict when the screen needs it, e.g. what changed meanwhile, or what the user must
+confirm before saving (`{ error: 'confirmation_required', ... }`). The ViewModel narrows it; `unknown`, never `any`.
 
 The discriminated union is deliberate: `switch (result.status)` is exhaustively checked by TypeScript, so a new status forces every consumer to handle it — the same safety the .NET `switch` on `OutputStatus` gives.
 
@@ -539,7 +542,7 @@ export function toResult<T>(status: number, body: ApiBody<T>): Result<T> {
   if (status >= 200 && status < 300) return Result.success(body.data as T);
   if (status === 400) return Result.validation(body.message, body.fields);
   if (status === 404) return Result.notFound(body.message);
-  if (status === 409) return Result.conflict(body.message);
+  if (status === 409) return Result.conflict(body.message, body.details);
   throw new UnexpectedResponseError(status); // 5xx and anything else: unexpected
 }
 ```
