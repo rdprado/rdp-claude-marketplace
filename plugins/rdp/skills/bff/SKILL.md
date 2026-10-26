@@ -76,6 +76,27 @@ Integration: the real entry against a fake HTTP upstream (identity provider + AP
 Developers must be able to follow any request from the browser to the API and see auth problems
 before users report them. One `401` is normal (sessions expire); the signal is the pattern.
 
+**Logger and where the logs go:**
+
+- Classes log through a `Logger` port (`application/ports/Logger.ts`); the adapter is
+  `PinoLogger` over **pino**, with `redact` on `token`, `cookie`, `authorization`, `code` as a
+  safety net. Not `console.*` in production: no levels, no redaction.
+- pino writes JSON lines to **stdout**, never to a file. The host collects them: journald under
+  systemd (`journalctl -u <service> -o cat`), `docker logs` in a container. An agent (Grafana
+  Alloy → Loki, the Datadog agent) ships them to the tool. The app knows nothing of the destination.
+- Unexpected errors also go to the monitoring tool (e.g. Sentry) through the `Monitoring` port,
+  with the stack.
+- .NET (BFF inside the API): `ILogger<T>` is already the port; same stdout/journald path.
+
+```ts
+// application/ports/Logger.ts
+export interface Logger {
+  info(event: string, fields?: Record<string, unknown>): void;
+  warn(event: string, fields?: Record<string, unknown>): void;
+  error(event: string, fields?: Record<string, unknown>): void;
+}
+```
+
 **1. One line per request**, in the entry (`handle` in `hooks.server.ts`), through a `Logger` port,
 structured JSON to stdout:
 
