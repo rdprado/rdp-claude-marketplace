@@ -16,7 +16,8 @@ Two valid shapes:
 - **If the API only serves this one frontend and doesn't need to be independently deployed or
   versioned, embed it directly in the BFF host as a local API.** The backend API's auth controller
   is the BFF (e.g. `AuthController` in .NET sets the cookie), and the front is a static SPA served
-  by it.
+  by it. **At RDP this shape (2-tier) is usually not recommended**; the default is the separate BFF
+  below. Use it only after discussing it with the team.
 - **If the API is shared by several clients (mobile, MCP, another front) or deployed separately,
   use a separate BFF** (SvelteKit server, Next.js route handlers). It only does sign-in, the cookie,
   refresh, and proxying to the API with `Authorization: Bearer`. No business logic, no use cases,
@@ -69,6 +70,57 @@ Unit tests, with fakes for the ports:
   - A mutating request from another origin is refused (CSRF).
 
 Integration: the real entry against a fake HTTP upstream (identity provider + API).
+
+### Observability
+
+Developers must be able to follow any request from the browser to the API and see auth problems
+before users report them. One `401` is normal (sessions expire); the signal is the pattern.
+
+**1. One line per request**, in the entry (`handle` in `hooks.server.ts`), through a `Logger` port,
+structured JSON to stdout:
+
+```json
+{ "event": "request", "method": "GET", "route": "/api/trainees/:email",
+  "status": 200, "durationMs": 84, "upstreamMs": 71, "traceId": "…", "userId": "…" }
+```
+
+- `route` is the template, never the real path: paths can carry emails or ids.
+- `upstreamMs` = time spent in the API, so "BFF slow" and "API slow" are told apart.
+
+**2. Auth events**, logged by the classes that own them:
+
+| Event | Level |
+|---|---|
+| `signin.ok` / `signin.failed` (reason: `invalid_code`, `expired`, `idp_down`) | Info / Warning |
+| `refresh.ok` / `refresh.failed` (reason: `expired`, `revoked`) | Info / Warning |
+| `refresh.reused` — a rotated refresh token used twice: possible theft | Error |
+| `signout` (and whether the revoke worked) | Info |
+| `csrf.rejected` | Warning |
+
+**3. Failures:** `proxy.failed` (API down or timeout, with `upstreamMs`), `idp.unavailable`
+(identity provider down), and any unexpected exception in the framework's error hook
+(`handleError` in SvelteKit) with its stack. All Error.
+
+**4. Tracing:** the BFF reads the W3C `traceparent` header (or creates one when the browser sent
+none), forwards it to the API, and every line carries its `traceId`. Use `traceparent`, not a
+custom header: Sentry, Datadog, Grafana and .NET (`Activity`) already propagate it.
+
+**5. Alerts** on rates, never on single events: `signin.failed` and `refresh.failed` above normal,
+any `refresh.reused`, `proxy.failed`, `idp.unavailable`.
+
+**Never logged:** tokens, cookies, sign-in codes, emails or other personal data, request and
+response bodies.
+
+**In the front:** the shared HTTP adapter adds a breadcrumb per request (route, status, duration)
+and the ViewModel's `catch` reports unexpected failures. A breadcrumb travels only with a later
+error, so rate alerts come from the BFF logs, not the front. Validation and not-found results are not
+logged: the user already sees them.
+
+**BFF inside the API (2-tier):** the same events and fields, logged by the API (.NET structured
+logging); the BFF and API lines are one log.
+
+**Tests:** the classes log through the `Logger` port, so a test checks the event and that no token or
+email is in it (e.g. `refresh.reused` logs Error without the token).
 
 ## The front
 
