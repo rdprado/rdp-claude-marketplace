@@ -364,30 +364,37 @@ The `switch` has no `default` — TypeScript flags it if a new `OutputStatus` is
 
 ## BFF (backend for frontend)
 
-When the app has its own backend API (e.g. .NET), the web front talks only to a BFF (SvelteKit
-server routes, Next.js route handlers) and the BFF talks to the API. Most web apps use one, for
-token security: the BFF holds identity and the token.
+The BFF holds identity and the token, so browser JavaScript never sees it (IETF
+`draft-ietf-oauth-browser-based-apps` §6.1; Duende BFF):
 
-- At sign-in the BFF gets the token from the API and keeps it in an HttpOnly + Secure + SameSite
-  cookie. Browser JavaScript never sees it.
-- On each call the BFF reads the cookie and calls the API with `Authorization: Bearer`.
+- At sign-in the BFF talks to the identity provider and keeps the token in an HttpOnly + Secure +
+  SameSite cookie. The front never calls the identity provider.
+- On each call the browser sends the cookie; the BFF reads the token from it.
 
-**The BFF has no business logic, so it has no use cases.** The controller calls the API port directly:
+Two valid shapes:
+
+- **If the API only serves this one frontend and doesn't need to be independently deployed or
+  versioned, embed it directly in the BFF host as a local API.** The backend API's auth controller
+  is the BFF (e.g. `AuthController` in .NET sets the cookie), and the front is a static SPA served
+  by it.
+- **If the API is shared by several clients (mobile, MCP, another front) or deployed separately,
+  use a separate BFF** (SvelteKit server, Next.js route handlers). It only does sign-in, the cookie,
+  refresh, and proxying to the API with `Authorization: Bearer`. No business logic, no use cases,
+  no per-feature controllers.
+- If the API returns fast-changing data (e.g. market data over SignalR or WebSocket), proxying it
+  through the BFF adds latency and load (IETF §6.1.4.3). Consider adjusting the API as well, so the
+  browser reaches that stream directly; discuss it with the team first.
+
+The front is the same in both:
 
 ```
-browser:  page → field validator (pure function, warning only)
-          page → TraineesClient (interface, via context) → HttpTraineesClient → /bff/...
-BFF:      +server.ts (1 line) → TraineesController (class) → BackendApi (interface) → HttpBackendApi → API
+page → field validator (pure function, warning only)
+page → TraineesClient (interface, via context) → HttpTraineesClient → /api/...
 ```
 
-- If real logic shows up in the BFF (rules, decisions, orchestration of several calls), it moves to a
-  use case in the backend API, not to the BFF.
-- The BFF's jobs are adapter jobs: map the request, forward the auth cookie, map the API status to
-  HTTP.
-- The controller is a class that receives the port interface in its constructor, so it is testable
-  with a fake. The `+server.ts` file only hands off to it.
 - Field validators in the browser only warn before sending. The API validates for real, and both
   sides use the same test cases.
+- If logic shows up in a separate BFF, it moves to a use case in the API.
 
 ## Dependency injection
 
