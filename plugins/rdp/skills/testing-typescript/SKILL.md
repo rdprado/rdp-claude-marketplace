@@ -202,6 +202,23 @@ describe('TraineesViewModel', () => {
 ```
 
 - Check the state the screen would show, not private fields or how many times `set()` ran.
+- A ViewModel that starts a stream, timer or subscription has a test that `dispose()` stops it:
+
+```ts
+it('stops the market data stream on dispose', async () => {
+  // Arrange
+  const unsubscribe = jest.fn();
+  const marketData: MarketDataFeed = { subscribe: async () => unsubscribe };
+  const vm = new BookViewModel(marketData);
+  await vm.watch('PETR4');
+
+  // Act
+  vm.dispose();
+
+  // Assert
+  expect(unsubscribe).toHaveBeenCalledTimes(1);
+});
+```
 
 Errors get the same treatment (see `clean-architecture-typescript` → "Errors → feedback"): one test
 per case, checking the state and the ports.

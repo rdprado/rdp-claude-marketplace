@@ -3,10 +3,10 @@
 This repo is the PnT Claude Code plugin (`plugins/rdp/`), shipped through
 the `pnt-claude-marketplace` marketplace (`.claude-plugin/marketplace.json`).
 
-- Always-on rules for projects: `plugins/rdp/templates/pnt-standards.md`
-  (copied into each project by /rdp:setup-repo, refreshed by the check at the start of every PnT command).
-- Project CLAUDE.md templates: `plugins/rdp/templates/CLAUDE.project.md`
-  and `CLAUDE.legacy.md`.
+- Always-on rules for projects: `plugins/rdp/templates/rdp-standards.md`
+  (copied into each project by /rdp:setup-repo, refreshed by the check at the start of every RDP command).
+- Project CLAUDE.md templates: `plugins/rdp/templates/claude-md/` — `legacy.md` (one file) and `modern/`
+  (`base.md` plus one file per stack; the setup-repo menu picks them).
 - On-demand rules: `plugins/rdp/skills/`. Commands: `plugins/rdp/commands/`.
   Agents: `plugins/rdp/agents/`.
 

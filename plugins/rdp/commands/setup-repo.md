@@ -34,10 +34,12 @@ Set up this project with the RDP AI standards.
        - Tag: [MarketPlaceExperimentation] (prefix of every issue title)
        - GitHub mapping: rdprado/stimulus-app · docs/ · no project board
        - RDP standards: up to date (2.11.1)
-       - dryer/crapper: installed (or: n/a, .NET only, Sonar is the check)
+       - dryer/crapper: installed (duplicated code, risky untested functions; or: n/a, .NET only, Sonar is the check)
        Still to fill: Stack, Git flow, Docs, Sonar, Build commands
        ```
-     - Step 3: compare `CLAUDE.md` with the matching template (see step 3).
+     - Step 3: compare `CLAUDE.md` with the matching template (see step 3). If the profile
+       has a `Template:` line, also compare its `## Template: …` section with the current
+       stack file and offer the changes.
      - Step 4: compare `.claude/rdp-standards.md` and the RDP block with
        `${CLAUDE_PLUGIN_ROOT}/templates/` (see step 4).
      - Steps 5–6 as written (both skip what is already done).
@@ -45,7 +47,31 @@ Set up this project with the RDP AI standards.
        build commands are still placeholders.
 2. Ask, one at a time, and always give a suggestion the developer can accept
    or change:
-   - Modern or legacy. Modern is the default; legacy is the exception. Explain in one
+   - Template. Show this menu as a numbered list and let the developer type the number
+     (in sync mode, only if the profile has no `Template:` line):
+     ```
+     Which template?
+     1. Legacy (WinForms, .NET Framework, old ASP.NET, …)
+     Modern
+       2. ASP.NET Core back end
+       3. Svelte + BFF
+       4. Svelte + BFF + ASP.NET Core back end
+     5. Other (describe it)
+     ```
+     Before the menu, say what the files show and suggest a number: a `net4x` `.csproj` → 1;
+     `Microsoft.NET.Sdk.Web` → 2; `@sveltejs/kit` in `package.json` → 3, or 4 if there's also a
+     `Microsoft.NET.Sdk.Web` project. An empty folder is a new project: no suggestion.
+     The number sets legacy/modern and the stack, and picks the files for step 3 under
+     `${CLAUDE_PLUGIN_ROOT}/templates/claude-md/`:
+     | # | Base | Stack file |
+     |---|---|---|
+     | 1 | `legacy.md` | — (ask the stack, as in 5) |
+     | 2 | `modern/base.md` | — (Stack: `.NET <version> + ASP.NET Core`; the base already covers it) |
+     | 3 | `modern/base.md` | `modern/svelte-bff.md` |
+     | 4 | `modern/base.md` | `modern/svelte-bff-aspnetcore.md` |
+     For 5, ask the developer to describe the stack in one line, then ask the two questions
+     below (modern or legacy, stack) and use no stack file.
+   - Only for 5 — modern or legacy. Modern is the default; legacy is the exception. Explain in one
      line: modern = .NET (Core / 5+) or TypeScript apps that follow clean architecture;
      legacy = old code with no clean architecture and little test coverage, e.g. .NET
      Framework 4.x, WinForms, old ASP.NET. Say what the project files show
@@ -54,7 +80,7 @@ Set up this project with the RDP AI standards.
      `n` = legacy. If the files point to legacy, say so before the question, so the
      developer can answer `n`. If the folder has no project files yet, say it is a new
      project, and a new project is modern.
-   - Stack: .NET, TypeScript/JavaScript, or both. Detect it (`.csproj` → .NET;
+   - Only for 1 and 5 — stack: .NET, TypeScript/JavaScript, or both. Detect it (`.csproj` → .NET;
      `tsconfig.json` or `package.json` → TypeScript/JavaScript) and say what you found.
      If the folder has no project files yet, ask.
    - GitHub repo (`owner/repo`). Detect it with `gh repo view --json nameWithOwner`
@@ -63,10 +89,18 @@ Set up this project with the RDP AI standards.
    - Tag (e.g. `[WebBroker]`): the prefix of every issue title in that GitHub
      repo. Suggest it from the folder name, in the same form as the repo's
      name.
-3. If the project has no `CLAUDE.md`: copy
-   `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.legacy.md` (legacy) or
-   `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.project.md` (not legacy) to the
-   project root as `CLAUDE.md`, filling in the GitHub repo and the tag.
+3. If the project has no `CLAUDE.md`: copy the base from step 2
+   (`${CLAUDE_PLUGIN_ROOT}/templates/claude-md/legacy.md` or `modern/base.md`) to the
+   project root as `CLAUDE.md`, filling in the GitHub repo and the tag. Then apply the stack
+   file, if there is one:
+   - `Stack:` line → the file's first line (ask for `<version>`, suggest the latest LTS).
+   - `Template:` line → the menu name (e.g. `Svelte + BFF`); `N/A` for 5.
+   - Its `## Template: …` section (and `## Layout`, when it has one) → right after the
+     Project profile.
+   - Its `Build:` commands → replace the build placeholders.
+   - Git flow: modern projects get B (GitHub Flow) from the base without asking; just say it
+     in the summary, with "switch to A only if you ship parallel versioned releases". Legacy
+     projects: ask, as with any other placeholder.
    If it already has one: never overwrite it. Compare it with the matching
    template and show me what's missing (the RDP block, Project profile
    lines, sections, ...) and which lines still hold placeholders (`<...>`).
@@ -89,10 +123,16 @@ Set up this project with the RDP AI standards.
    A project can be .NET only, TypeScript/JavaScript only, or both. With both, offer
    the tools for the TypeScript/JavaScript code; the .NET code stays on Sonar only.
    - Run every command in this step in PowerShell (not Bash).
+   - Whenever this step mentions them (installed or not), explain them first, in these words:
+     ```
+     Two code-quality checks by Uncle Bob, for TypeScript/JavaScript:
+     - dryer: finds duplicated code
+     - crapper: finds risky untested functions
+     ```
    - Check them: `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m dryer --help` and
-     `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m crapper --help`. If both run,
-     skip the install.
-   - Otherwise say what they are in one line, say they are recommended, and ask:
+     `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m crapper --help`. If both run, say
+     "Both are already installed on this machine." and skip the install.
+   - Otherwise say they are recommended and ask:
      "Install them? (y/n)". They need Python 3.11+ and git:
      ```
      python -m venv $HOME\.venvs\pnt-tools
@@ -138,7 +178,8 @@ Set up this project with the RDP AI standards.
      ```
 
    Values asked to the developer are marked as such.
-7. Say what was done, then tell me to run `/init` now: it fills in the
+7. Say what was done. In an empty project, skip `/init` (there's no code to read yet) and say
+   to run it once the first code exists. Otherwise tell me to run `/init` now: it fills in the
    stack, the layout and the build commands below the RDP block and the
    Project profile. Then `CLAUDE.md` and `.claude/rdp-standards.md` must be
    committed.

@@ -18,9 +18,10 @@ Rules that apply: all RDP skills, including clean architecture. Tests are requir
 ## Project profile
 
 - Stack: <.NET 8 / TypeScript + React Native / …>
+- Template: <ASP.NET Core back end / Svelte + BFF / Svelte + BFF + ASP.NET Core back end / N/A>
 - Uses clean architecture: YES
 - Legacy: NO
-- Git flow: <A (release branches) / B (GitHub Flow)> — see the `git-flow` skill.
+- Git flow: B (GitHub Flow) — see the `git-flow` skill. Switch to A only if the project ships parallel versioned releases.
 - GitHub repo: `<owner/repo>` — tag `[<Project>]` (every issue title starts with it); labels and milestones are read from GitHub.
 - Docs: <path to this project's intro in docs/>
 

@@ -362,6 +362,8 @@ Rules that keep it testable:
 3. Actions return a `Promise` (`load()`, `submit()`), so a test can `await` them.
 4. The notification plumbing lives in one base class, `ViewModel<S>`. ViewModels only call `set()`.
 5. The View has no logic, so it has no unit tests. The ViewModel does.
+6. A ViewModel lives only while its screen is mounted, and the screen calls `vm.dispose()` when it
+   unmounts (see "Lifecycle").
 
 The base class serves both frameworks: Svelte's store contract (`subscribe` calls back right away
 and returns an unsubscribe) and React's `useSyncExternalStore` (`subscribe` + a stable snapshot —
@@ -371,6 +373,7 @@ and returns an unsubscribe) and React's `useSyncExternalStore` (`subscribe` + a 
 // interface-adapters/common/ViewModel.ts
 export abstract class ViewModel<S> {
   private readonly listeners = new Set<(state: S) => void>();
+  private readonly cleanups: (() => void)[] = [];
 
   constructor(private current: S) {}
 
@@ -386,9 +389,20 @@ export abstract class ViewModel<S> {
     return () => this.listeners.delete(listener);
   };
 
+  // Stops what this ViewModel started (streams, timers, subscriptions). Leaves it reusable:
+  // React's StrictMode, in development, runs the cleanup and then the effect again on the same instance.
+  dispose(): void {
+    this.cleanups.splice(0).forEach((cleanup) => cleanup());
+  }
+
   protected set(next: S): void {
     this.current = next;
     this.listeners.forEach((listener) => listener(next));
+  }
+
+  // Register how to stop something this ViewModel started, e.g. a stream's unsubscribe.
+  protected track(cleanup: () => void): void {
+    this.cleanups.push(cleanup);
   }
 }
 ```
@@ -430,14 +444,21 @@ Svelte reads it with `$vm`; the route `src/routes/trainees/+page.svelte` only re
 ```svelte
 <!-- interface-adapters/screens/trainees/TraineesScreen.svelte -->
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { getContainer } from '@composition/context';
   const vm = getContainer().traineesViewModel();
   vm.load();
+  onDestroy(() => vm.dispose());
 </script>
 
 {#if $vm.error}<p role="alert">{$vm.error}</p>{/if}
 {#each $vm.names as name}<p>{name}</p>{/each}
 ```
+
+`$vm` is Svelte shorthand. When the component mounts, Svelte calls
+`vm.subscribe((newState) => { localCopy = newState })` — that arrow is the listener, and it goes
+into the ViewModel's `listeners`. Every `set()` calls it, the local copy changes, the screen
+re-renders. When the component is destroyed, Svelte calls the unsubscribe it got back.
 
 React reads it with one generic hook:
 
@@ -452,9 +473,40 @@ export function TraineesScreen() {
   const { traineesViewModel } = useContainer();
   const [vm] = useState(traineesViewModel); // one instance per mount
   const state = useViewModel(vm);
-  useEffect(() => void vm.load(), [vm]);
+  useEffect(() => {
+    void vm.load();
+    return () => vm.dispose();
+  }, [vm]);
 
   return state.error ? <Text role="alert">{state.error}</Text> : <TraineeList names={state.names} />;
+}
+```
+
+`useSyncExternalStore` does what `$vm` does: React registers its own listener through
+`vm.subscribe`, re-renders when it is called, and unsubscribes on unmount.
+
+### Lifecycle
+
+The container holds **factories** (`traineesViewModel: () => new TraineesViewModel(client)`), not
+ViewModels. Only screens on display have one:
+
+| Moment | Svelte | React |
+|---|---|---|
+| Screen mounts | `<script>` runs: `getContainer().traineesViewModel()` creates the ViewModel; `$vm` subscribes | `useState(traineesViewModel)` creates it once; `useSyncExternalStore` subscribes |
+| Screen is live | `set()` → listener → re-render | `set()` → listener → re-render |
+| Screen unmounts | `$vm` unsubscribes; `onDestroy(() => vm.dispose())` | `useSyncExternalStore` unsubscribes; the effect's cleanup calls `vm.dispose()` |
+| After | nothing references the ViewModel; the JavaScript engine's garbage collector frees it | same |
+
+`dispose()` is what lets the garbage collector do its job: a running stream, timer or SignalR
+subscription keeps a reference to the ViewModel and keeps it alive. Whatever a ViewModel starts, it
+registers with `track(...)`:
+
+```ts
+async watch(symbol: string): Promise<void> {
+  const unsubscribe = await this.marketData.subscribe(symbol, (tick) =>
+    this.set({ ...this.state, lastPrice: tick.price })
+  );
+  this.track(unsubscribe);
 }
 ```
 
@@ -618,6 +670,8 @@ export const useContainer = () => {
 - Don't put business rules in components, ViewModels, hooks, or Zustand stores. Those belong in use cases and entities (or the API). A ViewModel holds presentation decisions only.
 - Don't put logic in a View (`.tsx` / `.svelte`). It binds to its ViewModel.
 - Don't use hooks or runes (`$state`, `$derived`) inside a ViewModel. It stays plain TS.
+- Don't keep ViewModel instances in the container or a module variable. The container holds factories; the screen creates its ViewModel and disposes it on unmount.
+- Don't start a stream, timer or subscription in a ViewModel without `track(...)`-ing its stop.
 - Don't throw from use cases for expected failures (validation, not-found). Return a `Result`.
 - Don't call `new Date()`, `Date.now()`, or `Math.random()` inside entities or application code. Inject a `Clock` / RNG port — otherwise it isn't testable.
 - Don't reach into a third-party SDK from more than one place. Wrap it once behind a port.

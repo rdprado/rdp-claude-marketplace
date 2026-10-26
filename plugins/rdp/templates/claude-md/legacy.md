@@ -17,6 +17,7 @@ Rules that apply: all RDP skills except clean architecture. Tests are not requir
 ## Project profile
 
 - Stack: <legacy runtime, e.g. .NET Framework 4.7.2 + WinForms>
+- Template: Legacy
 - Uses clean architecture: NO
 - Legacy: YES — no enforced layering, legacy framework, little test coverage.
 - Git flow: <A (release branches) / B (GitHub Flow)> — see the `git-flow` skill.
