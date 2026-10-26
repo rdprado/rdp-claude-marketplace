@@ -52,9 +52,30 @@ Innermost to outermost. **Dependencies point inward.** Inner layers never import
 
 1. **Entities** — pure enterprise business rules. Entities, their invariants, and the value types that model the business. No React, no `expo-*`, no `axios`, no `@microsoft/signalr` imports. If you `import` a framework here, the layer is wrong.
 2. **Application** — application business rules; a sibling of Entities, not nested under it. Use cases, their `Input`/`Output` types, port interfaces (`StrategyRepository`, `Clock`), validators, and the shared primitives (`Result`/`OutputStatus`, `ValidationResult`). Depends only on Entities. Still no framework imports.
-3. **Infrastructure** — implementations of the application ports: API clients (Axios `WebBroker`), SignalR repositories, `SecureStore`, Sentry, Firebase, LaunchDarkly. Data-access adapters live under `infrastructure/data/`; other infra concerns (monitoring, config, feature flags) sit beside it. Each third-party SDK is wrapped behind an application port (an interface **owned by the Application layer**; see `.claude/rdp-standards.md` → "wrap third-party libs"). One module per concern.
+3. **Infrastructure** — implementations of the application ports: the **gateways** (clients and repositories: `HttpTraineesGateway`, Axios `WebBroker`, SignalR repositories) and the SDK wrappers (`SecureStore`, Sentry, Firebase, LaunchDarkly). In Uncle Bob's diagram the gateways belong to the Interface Adapters ring and the SDKs to Frameworks & Drivers; we keep both in `infrastructure/` so each SDK stays behind one wrapper. Data-access adapters live under `infrastructure/data/`; other infra concerns (monitoring, config, feature flags) sit beside it. Each third-party SDK is wrapped behind an application port (an interface **owned by the Application layer**; see `.claude/rdp-standards.md` → "wrap third-party libs"). One module per concern.
 4. **Interface Adapters** — the outer ring where **presentation and entry live together**. Presentation is **MVVM** — a View pattern, not a Clean Architecture layer of its own: the View (screens, components) binds to a ViewModel class per screen (see "Presentation: MVVM"). Entry is the way input reaches the app: user clicks / Expo Router or SvelteKit routes on the client, or HTTP endpoints on a backend. No business logic.
 5. **Composition root** — wires concrete implementations to ports and provides them to the interface-adapters layer (see "Dependency injection" below).
+
+**Thin front** (the business rules are in the API, e.g. a Svelte app behind a BFF): Entities and use
+cases may be empty. Application then holds only the ports, their read models and `common/`, and the
+ViewModel calls the port directly. Add an entity or a use case only when real front rules show up.
+
+**Names:** the port says what it provides, never the technology (`TraineesGateway`, `SecureStorage`,
+`Clock`); the implementation puts the technology first (`HttpTraineesGateway`, `ExpoSecureStorage`,
+`SystemClock`). A port to the API is a `…Gateway`.
+
+Every file starts with a comment naming its layer (one of the five above) and its role, e.g.
+`// Layer: Infrastructure — adapter of the TraineesGateway port.`
+
+What each layer holds, and what gets a unit test:
+
+| Layer | Holds | Unit test? |
+|---|---|---|
+| Entities | entities, invariants, value types | **yes**, every method |
+| Application | use cases, validators; ports, read models, `Result` (types only) | **yes** for use cases and validators; types have nothing to test |
+| Infrastructure | gateways (clients, repositories) and SDK wrappers, with their pure parts: the mapping, `toResult`, the shared 401 path | **yes** for the pure parts; the adapter's call itself **no** (integration or inspection) |
+| Interface Adapters | ViewModels; Views and routes | **yes** for every ViewModel action and `Result` case; the View **no**, it only binds |
+| Composition root | the wiring | **no**, the compiler checks it |
 
 > Rule of thumb: check the `import` lines. An `entities/` or `application/` file importing anything from `react`, `expo-*`, `axios`, `@microsoft/signalr`, or the interface-adapters layer is a layer violation.
 
@@ -121,6 +142,10 @@ src/
 
 > `app/` sits at the root because Expo Router requires it there, but it belongs to the **Interface Adapters** layer conceptually — it is the entry. Keep the route files thin: they re-export screens from `interface-adapters/screens/`. SvelteKit is the same with `src/routes/`: `+page.svelte` only renders `<TraineesScreen />`.
 
+> Thin front: no `entities/` and no `application/use-cases/`. A port and its read model share a file
+> (`application/ports/TraineesGateway.ts` with `RosterEntry`); the adapter and its mapping sit in
+> `infrastructure/data/trainees/` (`HttpTraineesGateway.ts`, `rosterMapping.ts` + test).
+
 > Existing projects don't have to move every file at once. The target shape is above; refactor toward it incrementally.
 
 ## Interface Adapters: where presentation and entry meet
@@ -133,7 +158,8 @@ How that maps in this codebase:
 - **UI / entry adapters** live in `interface-adapters/`: screens (View + ViewModel), components, Zustand stores, and the entry points (`app/` or `src/routes/`, click handlers).
 - **Infra adapters** — gateways and repositories that implement the ports against a real SDK — live in `infrastructure/` (data-access under `infrastructure/data/`). Conceptually they are Interface Adapters too; we keep the *concrete implementations* in Infrastructure so the outermost driver code (the SDKs themselves) stays isolated behind one wrapper each.
 
-The takeaway: presentation is not a layer of its own — it is the View pattern used inside the Interface Adapters ring. Whether input arrives as a button click or an endpoint call, an adapter turns it into a use case `Input`, invokes the use case, and renders the `Output`.
+The takeaway: presentation is not a layer of its own — it is the View pattern used inside the Interface Adapters ring. Whether input arrives as a button click or an endpoint call, an adapter turns it into a use case `Input`, invokes the use case, and renders the `Output`. In a thin
+front without use cases, the ViewModel calls the port directly.
 
 ## Entities
 
@@ -344,13 +370,20 @@ export class ExpoSecureStorage implements SecureStorage {
 
 Benefits: Entities and Application never depend on `expo-*`; swapping or auditing a dependency touches one file; the SDK is mockable in tests; a supply-chain incident in one package is contained to its wrapper.
 
-API mapping (raw payload → DTO → entity) lives in `infrastructure/data/` — not in components, not on entities.
+API mapping lives in `infrastructure/data/`. The adapter translates both ways: the app's types → the
+request body, the answer → the app's types, parsed once by a pure, unit-tested mapping function. The
+API's JSON type stays private to the adapter. No screen decisions there: labels, `href` and
+`disabled` belong to the ViewModel.
+
+**Thin front** (the business rules are in the API): there may be no entities. The port then speaks a
+*read model* owned by the Application layer (`RosterEntry`: the app's names, closed unions, required
+fields), never the API's JSON. Entities with methods only where the front has real rules.
 
 ## Presentation: MVVM
 
 Every screen, in React, React Native and Svelte, has three parts:
 
-- **Model:** where the data comes from — the use case or client interface (`TraineesClient`),
+- **Model:** where the data comes from — the use case or gateway interface (`TraineesGateway`),
   entities, types.
 - **ViewModel:** one plain TS class per screen. It holds the screen state and decides what to show
   (messages, `canSubmit`, sorting, field warnings). No React and no Svelte inside: no hooks, no runes.
@@ -359,7 +392,7 @@ Every screen, in React, React Native and Svelte, has three parts:
 
 Rules that keep it testable:
 
-1. Everything outside comes through the constructor as an interface: use case or client, `Clock`,
+1. Everything outside comes through the constructor as an interface: use case or gateway, `Clock`,
    navigation, toasts.
 2. The state is one immutable snapshot (`vm.state`), replaced with `set()` on each change.
 3. Actions return a `Promise` (`load()`, `submit()`), so a test can `await` them.
@@ -367,6 +400,14 @@ Rules that keep it testable:
 5. The View has no logic, so it has no unit tests. The ViewModel does.
 6. A ViewModel lives only while its screen is mounted, and the screen calls `vm.dispose()` when it
    unmounts (see "Lifecycle").
+7. **The View binds, it doesn't decide** (Fowler's Presentation Model). The state is ready to show:
+   `pressed`, `disabled`, `emptyKey`, a row's `href` and texts are computed in the ViewModel. The
+   template only binds, loops (`{#each}`), shows/hides on booleans already computed, translates
+   keys (`$t`) and calls `vm.x()`. `class:on={$vm.filter === f || …}` is a decision: move it.
+   Fowler says Passive View is more testable, because Presentation Model leaves synchronization in
+   the view, *"which results in more untestable behavior than Passive View. Whether this difference
+   is significant or not is a judgment call."* Our call: Svelte and React render from state, so a
+   Presentation Model fits them; rule 7 keeps the untested part to synchronization.
 
 The base class serves both frameworks: Svelte's store contract (`subscribe` calls back right away
 and returns an unsubscribe) and React's `useSyncExternalStore` (`subscribe` + a stable snapshot —
@@ -419,7 +460,7 @@ export type TraineesState = {
 };
 
 export class TraineesViewModel extends ViewModel<TraineesState> {
-  constructor(private readonly client: TraineesClient) {
+  constructor(private readonly client: TraineesGateway) {
     super({ names: [], error: null, loading: false });
   }
 
@@ -514,12 +555,28 @@ async watch(symbol: string): Promise<void> {
 ```
 
 - **Use case or client?** When the business logic is in the API (see `rdp:bff`), the ViewModel
-  calls the client interface directly; a front use case would only pass the call through. Add a
+  calls the gateway interface directly; a front use case would only pass the call through. Add a
   front use case only for real front-side work: several ports in one action, offline, local
   storage, throttling a stream.
 - **Zustand** only for state shared across screens (session, selected account). A screen's own
   state lives in its ViewModel.
 - Big pure pieces of a ViewModel (a mapping, a sort rule) can move to a plain function next to it.
+
+### Big screens: one ViewModel per component
+
+A component with its own logic (a spreadsheet day, a chat panel) gets its own ViewModel. The parent
+calls the child's methods and reads `child.state`. The child talks back through **one delegate
+interface**, declared in its file and received in its constructor, which the parent `implements`.
+Its methods are past-tense notifications; the child never names the parent's type; no
+delegate if the child never talks back. The container gives the parent a factory for the child.
+Children never talk to each other.
+
+```ts
+export interface SheetDayDelegate {
+  rowsWereChanged(sessionId: string, rows: readonly Row[]): void;
+}
+// container: new WorkoutViewModel(client, (delegate) => new SheetDayViewModel(delegate, ticksGateway))
+```
 
 ### Errors → feedback
 
@@ -624,7 +681,7 @@ Two links, same as .NET:
 
 - **Use case ← ports:** the repositories and tech (HTTP, storage, clock) come in through the
   use case constructor, typed as port interfaces.
-- **ViewModel / endpoint → use case or client:** it gets the **interface** through its
+- **ViewModel / endpoint → use case or gateway:** it gets the **interface** through its
   constructor. It never does `new` and never imports the class.
 
 The only `new` lives in the **composition root**, a plain module written by hand (Pure DI). It is
@@ -635,13 +692,13 @@ missing dependency fails at compile time.
 // composition/container.ts
 export function buildContainer() {
   const strategyRepo = new SignalRStrategyRepository(/* ... */);
-  const traineesClient: TraineesClient = new HttpTraineesClient(/* ... */);
+  const traineesGateway: TraineesGateway = new HttpTraineesGateway(/* ... */);
   const clock: Clock = new SystemClock();
 
   return {
     createTwapStrategy: new CreateTwapStrategy(strategyRepo, clock) as CreateTwapStrategyUseCase,
     // ...one entry per use case, typed as its interface
-    traineesViewModel: () => new TraineesViewModel(traineesClient),
+    traineesViewModel: () => new TraineesViewModel(traineesGateway),
     // ...one factory per ViewModel: a new instance per screen
   };
 }
@@ -664,7 +721,7 @@ export const useContainer = () => {
 };
 ```
 
-> Tests never touch the container. They do `new CreateTwapStrategy(fakeRepo, fakeClock)` or `new TraineesViewModel(fakeClient)` — that's the whole point of constructor injection.
+> Tests never touch the container. They do `new CreateTwapStrategy(fakeRepo, fakeClock)` or `new TraineesViewModel(fakeGateway)` — that's the whole point of constructor injection.
 
 ## Don't
 
@@ -679,7 +736,8 @@ export const useContainer = () => {
 - Don't call `new Date()`, `Date.now()`, or `Math.random()` inside entities or application code. Inject a `Clock` / RNG port — otherwise it isn't testable.
 - Don't reach into a third-party SDK from more than one place. Wrap it once behind a port.
 - Don't create a `utils/` or `common/` dumping ground for misfit code. If a helper reasons about an entity's invariants, put it on the entity. If it touches IO/framework/serialization/time, define a port and implement it in `infrastructure/`. "I need a place for this helper" is a smell — find its real home.
-- Don't return raw API DTOs to components. Map to an entity in `infrastructure/data/`; the ViewModel turns it into what the screen shows.
+- Don't return raw API DTOs to components. Map them in `infrastructure/data/` to an entity or a read model; the ViewModel turns it into what the screen shows.
+- Don't decide in the View: no expression beyond binding a value the ViewModel already computed.
 - Don't add a DI container library. The composition root + Context is enough.
 - Don't `new` a use case, repository or SDK wrapper outside the composition root (tests excepted). Pages and endpoints get the interface.
 - Don't let the framework's style shape use cases, ports or entities (e.g. use cases as hooks or bare functions). Interface + class, constructor injection.

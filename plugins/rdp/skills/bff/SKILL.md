@@ -155,12 +155,12 @@ email is in it (e.g. `refresh.reused` logs Error without the token).
 The front is the same in both shapes:
 
 ```
-View (page) → TraineesViewModel → TraineesClient (interface) → HttpTraineesClient → /api/...
+View (page) → TraineesViewModel → TraineesGateway (interface) → HttpTraineesGateway → /api/...
               TraineesViewModel → TraineeFormValidator.validate (warning only)
 ```
 
 - The front is MVVM (see `rdp:clean-architecture-typescript` → "Presentation: MVVM"): the
-  ViewModel calls the client interface; no front use case when the logic is in the API.
+  ViewModel calls the gateway interface; no front use case when the logic is in the API.
 - Field validators in the browser only warn before sending. The API validates for real, and both
   sides use the same test cases.
 - If logic shows up in a separate BFF, it moves to a use case in the API.

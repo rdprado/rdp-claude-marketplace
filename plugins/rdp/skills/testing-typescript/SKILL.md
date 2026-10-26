@@ -49,13 +49,13 @@ For a front (browser or app), with the business logic in the API:
 |---|---|---|
 | **ViewModel** | after `load()`, sorted names; on an API error, the message; `canSubmit` false while loading | **yes**, the main target |
 | **Field validators** | "invalid email" | **yes** |
-| **Mappers / formatters** | API data → entity, `R$ 1.234,56` | **yes** |
+| **Mappers / formatters** | the API's JSON → entity or read model (`toRoster`), `R$ 1.234,56` | **yes**, known input, and what an older server leaves out |
 | **HTTP → `Result`** (`toResult`) | `400` → `validation` with `fields`; `500` → throws | **yes**, `it.each` over the status codes |
 | **Entity methods** | `canBeCancelled()` | **yes** |
 | **Front use case** (rare) | offline, several ports | yes, when one exists |
 | `ViewModel<S>` base class | subscribe / notify | one test, once |
 | View (`.svelte` / `.tsx`) | markup | **no**, it has no logic |
-| Port implementations (`HttpTraineesClient`, `ExpoSecureStorage`) | HTTP call, SDK call | **no**, integration test or inspection |
+| Port implementations (`HttpTraineesGateway`, `ExpoSecureStorage`) | HTTP call, SDK call | **no**, integration test or inspection |
 
 - No real I/O in unit tests — every boundary is a fake port injected through the constructor.
 - A click is a public ViewModel method: the View does `onclick={() => vm.submit()}`, the test
@@ -173,7 +173,7 @@ Build the ViewModel with `new` and fake ports, `await` the action, check `vm.sta
 describe('TraineesViewModel', () => {
   it('lists the names sorted after load', async () => {
     // Arrange
-    const client: TraineesClient = {
+    const client: TraineesGateway = {
       list: async () => Result.success([{ name: 'Bia' }, { name: 'Ana' }]),
     };
     const vm = new TraineesViewModel(client);
@@ -188,7 +188,7 @@ describe('TraineesViewModel', () => {
 
   it('shows the error when the API rejects', async () => {
     // Arrange
-    const client: TraineesClient = { list: async () => Result.validation('No access.') };
+    const client: TraineesGateway = { list: async () => Result.validation('No access.') };
     const vm = new TraineesViewModel(client);
 
     // Act
@@ -226,7 +226,7 @@ per case, checking the state and the ports.
 ```ts
 it('shows the field messages when the API rejects the form', async () => {
   // Arrange
-  const client: TraineesClient = {
+  const client: TraineesGateway = {
     save: async () => Result.validation('Invalid form.', { email: 'already taken' }),
   };
   const vm = new TraineeFormViewModel(client, fakeToaster(), fakeMonitoring());
@@ -243,7 +243,7 @@ it('offers a retry and reports when the request fails', async () => {
   // Arrange
   const failure = new Error('network down');
   const monitoring: jest.Mocked<Monitoring> = { report: jest.fn() };
-  const client: TraineesClient = { save: async () => { throw failure; } };
+  const client: TraineesGateway = { save: async () => { throw failure; } };
   const vm = new TraineeFormViewModel(client, fakeToaster(), monitoring);
 
   // Act
@@ -258,7 +258,7 @@ it('offers a retry and reports when the request fails', async () => {
 it('does not report an expired session', async () => {
   // Arrange
   const monitoring: jest.Mocked<Monitoring> = { report: jest.fn() };
-  const client: TraineesClient = { save: async () => { throw new SessionExpiredError(); } };
+  const client: TraineesGateway = { save: async () => { throw new SessionExpiredError(); } };
   const vm = new TraineeFormViewModel(client, fakeToaster(), monitoring);
 
   // Act

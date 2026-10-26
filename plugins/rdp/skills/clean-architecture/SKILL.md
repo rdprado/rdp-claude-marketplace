@@ -17,6 +17,9 @@ Innermost to outermost:
 
 Dependencies point inward. Check `.csproj` `<ProjectReference>` entries when in doubt — Entities must have zero.
 
+**Names:** the interface says what it provides, never the technology (`IGoalRepository`,
+`IEmailSender`); the implementation puts the technology first (`EFGoalRepository`, `SmtpEmailSender`).
+
 ## Design rules
 
 Testability:
