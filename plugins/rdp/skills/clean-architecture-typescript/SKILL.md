@@ -251,25 +251,29 @@ Both styles are valid clean architecture; this is our choice so every RDP projec
 
 Use cases don't throw for expected failure paths (validation, not-found, conflict). They return a `Result` discriminated union carrying status and payload; the interface-adapters layer maps the status to UI. This is the TS counterpart of the .NET `Output` + `OutputStatus`.
 
-Exceptions are reserved for unexpected failures (network down, SDK 500) — let those propagate to an error boundary / Sentry.
+Exceptions are reserved for unexpected failures (network down, SDK 500). In a use case, let them propagate. A ViewModel catches them at the screen (see "Errors → feedback").
 
 ```ts
 // application/common/Result.ts
 export type OutputStatus = 'success' | 'notFound' | 'validation' | 'conflict';
 
+export type FieldErrors = Readonly<Record<string, string>>;
+
 export type Result<T> =
   | { readonly status: 'success'; readonly value: T }
   | { readonly status: 'notFound'; readonly error: string }
-  | { readonly status: 'validation'; readonly error: string }
+  | { readonly status: 'validation'; readonly error: string; readonly fields?: FieldErrors }
   | { readonly status: 'conflict'; readonly error: string };
 
 export const Result = {
   success: <T>(value: T): Result<T> => ({ status: 'success', value }),
   notFound: <T>(error: string): Result<T> => ({ status: 'notFound', error }),
-  validation: <T>(error: string): Result<T> => ({ status: 'validation', error }),
+  validation: <T>(error: string, fields?: FieldErrors): Result<T> => ({ status: 'validation', error, fields }),
   conflict: <T>(error: string): Result<T> => ({ status: 'conflict', error }),
 };
 ```
+
+`fields` carries per-field messages when the API sends them (`{ email: 'already taken' }`), so the screen can show each one under its field.
 
 The discriminated union is deliberate: `switch (result.status)` is exhaustively checked by TypeScript, so a new status forces every consumer to handle it — the same safety the .NET `switch` on `OutputStatus` gives.
 
@@ -461,6 +465,98 @@ export function TraineesScreen() {
 - **Zustand** only for state shared across screens (session, selected account). A screen's own
   state lives in its ViewModel.
 - Big pure pieces of a ViewModel (a mapping, a sort rule) can move to a plain function next to it.
+
+### Errors → feedback
+
+The View calls a ViewModel method; the ViewModel calls the client; the `Result` comes back to the
+ViewModel, which turns it into state; the View re-renders. The View never sees the `Result`.
+
+```
+View: onclick={() => vm.submit()}
+  → ViewModel: await this.client.save(...)      ← the Result arrives here
+  → ViewModel: this.set({ ...state, fieldErrors })
+  → View re-renders from $vm / useViewModel
+```
+
+**1. The client maps HTTP to `Result`** in a pure function next to it, so the mapping is unit-tested
+and only the `fetch` call is left untested:
+
+```ts
+// infrastructure/data/trainees/toResult.ts
+export function toResult<T>(status: number, body: ApiBody<T>): Result<T> {
+  if (status >= 200 && status < 300) return Result.success(body.data as T);
+  if (status === 400) return Result.validation(body.message, body.fields);
+  if (status === 404) return Result.notFound(body.message);
+  if (status === 409) return Result.conflict(body.message);
+  throw new UnexpectedResponseError(status); // 5xx and anything else: unexpected
+}
+```
+
+- **`401`** is the same on every screen, so it is handled once, in the shared HTTP adapter. No
+  ViewModel handles it:
+  - BFF inside the API (2-tier): the adapter calls the refresh endpoint once and retries the request.
+  - Separate BFF: the BFF renews the token itself, so a `401` reaching the front means the session
+    is over.
+  - Still `401`: the adapter calls the `Session` port (`session.expired()` → back to sign-in) and
+    throws `SessionExpiredError`.
+- **Network down / `5xx`**: the client throws.
+
+**2. The ViewModel turns each case into state or a port call:**
+
+| Case | ViewModel | The user sees |
+|---|---|---|
+| `validation` | `fieldErrors: result.fields ?? {}`, `error: result.error` | the message under each field |
+| `notFound` / `conflict` | `error: result.error` | a banner |
+| thrown (network, `5xx`) | `error: 'errors.unexpected'`, `canRetry: true`, `monitoring.report(e)` | message + "Tentar de novo" |
+| thrown `SessionExpiredError` | only `saving: false`; not reported | the sign-in screen (the adapter already sent them) |
+| `success` | updates the state, `toaster.show('feedback.saved')` | updated list / toast |
+
+```ts
+async submit(): Promise<void> {
+  this.set({ ...this.state, saving: true, error: null, fieldErrors: {} });
+  try {
+    const result = await this.client.save(this.state.form);
+    switch (result.status) {
+      case 'success':
+        this.toaster.show('feedback.saved');
+        this.set({ ...this.state, saving: false });
+        return;
+      case 'validation':
+        this.set({ ...this.state, saving: false, error: result.error, fieldErrors: result.fields ?? {} });
+        return;
+      case 'notFound':
+      case 'conflict':
+        this.set({ ...this.state, saving: false, error: result.error });
+        return;
+      default:
+        assertNever(result); // a new status breaks the build here
+    }
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      this.set({ ...this.state, saving: false });
+      return;
+    }
+    this.monitoring.report(e);
+    this.set({ ...this.state, saving: false, error: 'errors.unexpected', canRetry: true });
+  }
+}
+```
+
+```ts
+// application/common/assertNever.ts
+export function assertNever(value: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(value)}`);
+}
+```
+
+- Navigation, toasts and monitoring are ports (`Navigator`, `Toaster`, `Monitoring`) in the
+  ViewModel's constructor, so a test checks them with fakes.
+- The `catch` is the screen's safety net: without it a failure leaves `saving: true` forever.
+- A session expiry is not a bug: never report it to monitoring.
+- The ViewModel's own text is an i18n key (`'errors.unexpected'`); the View translates it. Messages
+  from the API (`result.error`, `fields`) come in the user's language already.
+- Every `switch` on a status ends with `default: assertNever(x)`. Without it, a method that returns
+  `void` compiles even when a new status is not handled.
 
 ## BFF (backend for frontend)
 

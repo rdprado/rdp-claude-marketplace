@@ -43,9 +43,24 @@ What to read for:
 
 Mirrors `.claude/rdp-standards.md` → "Testability":
 
-- **Unit-test:** use cases, ViewModels, validators, entity methods, mappers (raw→DTO→entity), pure helpers. No real I/O — every boundary is a fake port injected through the constructor.
-- **Don't unit-test:** the port implementations themselves (`SignalRStrategyRepository`, `ExpoSecureStorage`, `HttpTraineesClient`). They cross a boundary; cover them with integration tests against a test server / emulator, or accept they're thin enough to verify by inspection.
-- **Don't unit-test Views** (`.tsx` / `.svelte`). They have no logic; the ViewModel does.
+For a front (browser or app), with the business logic in the API:
+
+| What | Example | Test? |
+|---|---|---|
+| **ViewModel** | after `load()`, sorted names; on an API error, the message; `canSubmit` false while loading | **yes**, the main target |
+| **Field validators** | "invalid email" | **yes** |
+| **Mappers / formatters** | API data → entity, `R$ 1.234,56` | **yes** |
+| **HTTP → `Result`** (`toResult`) | `400` → `validation` with `fields`; `500` → throws | **yes**, `it.each` over the status codes |
+| **Entity methods** | `canBeCancelled()` | **yes** |
+| **Front use case** (rare) | offline, several ports | yes, when one exists |
+| `ViewModel<S>` base class | subscribe / notify | one test, once |
+| View (`.svelte` / `.tsx`) | markup | **no**, it has no logic |
+| Port implementations (`HttpTraineesClient`, `ExpoSecureStorage`) | HTTP call, SDK call | **no**, integration test or inspection |
+
+- No real I/O in unit tests — every boundary is a fake port injected through the constructor.
+- A click is a public ViewModel method: the View does `onclick={() => vm.submit()}`, the test
+  calls `await vm.submit()`. The only thing left untested is that one-line wiring.
+- A separate BFF has its own list: see `rdp:bff` → "What to test".
 
 ## Naming
 
@@ -187,6 +202,84 @@ describe('TraineesViewModel', () => {
 ```
 
 - Check the state the screen would show, not private fields or how many times `set()` ran.
+
+Errors get the same treatment (see `clean-architecture-typescript` → "Errors → feedback"): one test
+per case, checking the state and the ports.
+
+```ts
+it('shows the field messages when the API rejects the form', async () => {
+  // Arrange
+  const client: TraineesClient = {
+    save: async () => Result.validation('Invalid form.', { email: 'already taken' }),
+  };
+  const vm = new TraineeFormViewModel(client, fakeToaster(), fakeMonitoring());
+
+  // Act
+  await vm.submit();
+
+  // Assert
+  expect(vm.state.fieldErrors.email).toBe('already taken');
+  expect(vm.state.saving).toBe(false);
+});
+
+it('offers a retry and reports when the request fails', async () => {
+  // Arrange
+  const failure = new Error('network down');
+  const monitoring: jest.Mocked<Monitoring> = { report: jest.fn() };
+  const client: TraineesClient = { save: async () => { throw failure; } };
+  const vm = new TraineeFormViewModel(client, fakeToaster(), monitoring);
+
+  // Act
+  await vm.submit();
+
+  // Assert
+  expect(vm.state.canRetry).toBe(true);
+  expect(vm.state.error).toBe('errors.unexpected');
+  expect(monitoring.report).toHaveBeenCalledWith(failure);
+});
+
+it('does not report an expired session', async () => {
+  // Arrange
+  const monitoring: jest.Mocked<Monitoring> = { report: jest.fn() };
+  const client: TraineesClient = { save: async () => { throw new SessionExpiredError(); } };
+  const vm = new TraineeFormViewModel(client, fakeToaster(), monitoring);
+
+  // Act
+  await vm.submit();
+
+  // Assert
+  expect(vm.state.saving).toBe(false);
+  expect(vm.state.error).toBeNull();
+  expect(monitoring.report).not.toHaveBeenCalled();
+});
+```
+
+The shared HTTP adapter's `401` path (refresh once and retry; still `401` → `session.expired()` and
+`SessionExpiredError`) is the one adapter logic worth unit tests: every screen depends on it. Test it
+with a fake `fetch` and a fake `Session`.
+
+And the HTTP mapping, one row per status:
+
+```ts
+describe('toResult', () => {
+  it.each([
+    [400, 'validation'],
+    [404, 'notFound'],
+    [409, 'conflict'],
+  ])('maps %i to %s', (status, expected) => {
+    // Act
+    const result = toResult(status, { message: 'x' });
+
+    // Assert
+    expect(result.status).toBe(expected);
+  });
+
+  it('throws on a 500', () => {
+    // Act / Assert
+    expect(() => toResult(500, { message: 'x' })).toThrow(UnexpectedResponseError);
+  });
+});
+```
 
 ## Coverage expectations
 
