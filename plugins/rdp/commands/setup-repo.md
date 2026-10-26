@@ -98,6 +98,22 @@ Set up this project with the RDP AI standards.
      $HOME\.venvs\pnt-tools\Scripts\pip install git+https://github.com/unclebob/dryer@66ff6d21a42c04afcad89c78a80066176d1294b0 git+https://github.com/unclebob/crapper@6fd92c4c9bcc56efb64a2f8743d5a2993bcfd42d
      ```
    - Add `.metrics/` to the project's `.gitignore` (both write their reports there).
+   - First diagnostic, optional. Offer it if the project is not legacy, or if the developer
+     asks: "Run a first check of duplication and complexity? It only reports; nothing
+     changes. (y/n)". If yes, from the project root, with
+     `PY` = `$HOME\.venvs\pnt-tools\Scripts\python -X utf8`:
+     - Duplication: `PY -m dryer`. dryer doesn't read C#, so .NET code stays on Sonar.
+     - Coverage first: crapper can't start `npm`/`npx` on Windows, so produce the LCOV
+       yourself with the project's runner:
+       - Jest: `npx jest --coverage --coverageReporters=lcov`
+       - Vitest: `npx vitest run --coverage --coverage.reporter=lcov` (needs `@vitest/coverage-v8`)
+       - Other test script: `npx c8 --reporter=lcov npm test`
+       If `package.json` has no `coverage` script, offer to add the matching one (y/n).
+       Then `PY -m crapper --use-existing-coverage`.
+     - No tests, or the test run fails: say so and run `PY -m crapper --no-coverage`
+       (complexity only; CRAP shows N/A).
+     - Show the 10 closest dryer pairs and the 10 worst crapper functions. Say it's the
+       starting point, not errors to fix now. Don't refactor during setup.
 6. GitHub mapping. Skip it if `CLAUDE.md` already has a `## GitHub mapping`
    section (update it only if the developer asks).
    - Docs folder: the folder where this project's documentation lives (the

@@ -4,7 +4,7 @@ description: "RDP rules for TypeScript / JavaScript — React, React Native, Sve
 ---
 # Clean Architecture — TypeScript / React (Native)
 
-How we structure React and React Native projects in TypeScript. This is the TS counterpart of the `clean-architecture` skill (.NET) — same layering and dependency rules, idiomatic TS shapes.
+How we structure React, React Native and Svelte projects in TypeScript. This is the TS counterpart of the `clean-architecture` skill (.NET) — same layering and dependency rules, idiomatic TS shapes.
 
 > **The framework never dictates a pattern from the use case inward.**
 > React, Svelte, Expo, a BFF — they live only in the Interface Adapters ring. From the use case
@@ -13,8 +13,8 @@ How we structure React and React Native projects in TypeScript. This is the TS c
 > use case **through its interface** and never does `new`; the only `new` lives in the
 > composition root. Framework fashion (hooks, function-everything) stops at the adapter.
 >
-> Updated on 24/10/2026 and recommended by RDP. Some existing projects are organized differently
-> (e.g. use cases as plain functions); new code follows this shape, and old code moves toward it
+> Updated on 26/10/2026 (presentation is MVVM) and recommended by RDP. Some existing projects are
+> organized differently (e.g. use cases as plain functions, logic in hooks); new code follows this shape, and old code moves toward it
 > when touched.
 
 ## TypeScript language
@@ -31,7 +31,7 @@ How we structure React and React Native projects in TypeScript. This is the TS c
 
 ## React / React Native
 
-- Components are pure functions of props + state. No business rules in components — call a use case.
+- Components are pure functions of props + state. No logic in components — a screen binds to its ViewModel (see "Presentation: MVVM").
 - Hooks follow the rules of hooks; custom hooks start with `use`. Keep `useEffect` dependency arrays honest — don't suppress the lint rule to hide a missing dep; fix the dep.
 - Memoize (`useMemo`/`useCallback`/`React.memo`) to fix a measured render problem, not preemptively. Excess memoization is its own cost and noise.
 - Lists that can grow use a virtualized list (`FlashList`/`FlatList`), never `.map()` into a `ScrollView`.
@@ -53,7 +53,7 @@ Innermost to outermost. **Dependencies point inward.** Inner layers never import
 1. **Entities** — pure enterprise business rules. Entities, their invariants, and the value types that model the business. No React, no `expo-*`, no `axios`, no `@microsoft/signalr` imports. If you `import` a framework here, the layer is wrong.
 2. **Application** — application business rules; a sibling of Entities, not nested under it. Use cases, their `Input`/`Output` types, port interfaces (`StrategyRepository`, `Clock`), validators, and the shared primitives (`Result`/`OutputStatus`, `ValidationResult`). Depends only on Entities. Still no framework imports.
 3. **Infrastructure** — implementations of the application ports: API clients (Axios `WebBroker`), SignalR repositories, `SecureStore`, Sentry, Firebase, LaunchDarkly. Data-access adapters live under `infrastructure/data/`; other infra concerns (monitoring, config, feature flags) sit beside it. Each third-party SDK is wrapped behind an application port (an interface **owned by the Application layer**; see `.claude/rdp-standards.md` → "wrap third-party libs"). One module per concern.
-4. **Interface Adapters** — the outer ring where **presentation and entry live together**. Presentation is a View pattern (MVVM / MVC / MVP / Passive View) — a React concern, not a Clean Architecture layer of its own; here it is the screens, components, custom hooks, and Zustand stores. Entry is the way input reaches the app: user clicks / Expo Router routes on the client, or HTTP endpoints on a backend. Both map user input to a use case input, call the use case, and render the `Output`. No business logic.
+4. **Interface Adapters** — the outer ring where **presentation and entry live together**. Presentation is **MVVM** — a View pattern, not a Clean Architecture layer of its own: the View (screens, components) binds to a ViewModel class per screen (see "Presentation: MVVM"). Entry is the way input reaches the app: user clicks / Expo Router or SvelteKit routes on the client, or HTTP endpoints on a backend. No business logic.
 5. **Composition root** — wires concrete implementations to ports and provides them to the interface-adapters layer (see "Dependency injection" below).
 
 > Rule of thumb: check the `import` lines. An `entities/` or `application/` file importing anything from `react`, `expo-*`, `axios`, `@microsoft/signalr`, or the interface-adapters layer is a layer violation.
@@ -106,16 +106,20 @@ src/
 │   │   ├── webBroker/              # implements StrategyRepository (Axios)
 │   │   └── secureStore/            # implements SecureStorage (expo-secure-store)
 │   └── monitoring/                 # Sentry, Firebase, LaunchDarkly — non-data infra
-├── interface-adapters/             # the View + entry (presentation patterns: MVVM/MVC/…)
+├── interface-adapters/             # presentation (MVVM) + entry
+│   ├── common/                     # ViewModel<S> base class, useViewModel (React)
 │   ├── screens/
-│   ├── components/
-│   ├── hooks/
-│   └── stores/                     # Zustand
+│   │   └── trainees/
+│   │       ├── TraineesViewModel.ts       # state + decisions, plain TS
+│   │       ├── TraineesViewModel.test.ts
+│   │       └── TraineesScreen.tsx         # the View (TraineesScreen.svelte in Svelte)
+│   ├── components/                 # shared Views
+│   └── stores/                     # Zustand: only state shared across screens
 ├── composition/                    # composition root (DI wiring)
 └── app/                            # Expo Router entry — route files that re-export from interface-adapters
 ```
 
-> `app/` sits at the root because Expo Router requires it there, but it belongs to the **Interface Adapters** layer conceptually — it is the entry. Keep the route files thin: they re-export screens from `interface-adapters/screens/`.
+> `app/` sits at the root because Expo Router requires it there, but it belongs to the **Interface Adapters** layer conceptually — it is the entry. Keep the route files thin: they re-export screens from `interface-adapters/screens/`. SvelteKit is the same with `src/routes/`: `+page.svelte` only renders `<TraineesScreen />`.
 
 > Existing projects don't have to move every file at once. The target shape is above; refactor toward it incrementally.
 
@@ -126,7 +130,7 @@ In Clean Architecture the outermost ring of adapters — presentation, controlle
 How that maps in this codebase:
 
 - **Ports** (the interface each adapter implements) live in `application/ports/`. They are the contract; the adapter is one concrete side of it.
-- **UI / entry adapters** live in `interface-adapters/`: screens, components, hooks, Zustand stores, and the entry points (`app/` routes, click handlers).
+- **UI / entry adapters** live in `interface-adapters/`: screens (View + ViewModel), components, Zustand stores, and the entry points (`app/` or `src/routes/`, click handlers).
 - **Infra adapters** — gateways and repositories that implement the ports against a real SDK — live in `infrastructure/` (data-access under `infrastructure/data/`). Conceptually they are Interface Adapters too; we keep the *concrete implementations* in Infrastructure so the outermost driver code (the SDKs themselves) stays isolated behind one wrapper each.
 
 The takeaway: presentation is not a layer of its own — it is the View pattern used inside the Interface Adapters ring. Whether input arrives as a button click or an endpoint call, an adapter turns it into a use case `Input`, invokes the use case, and renders the `Output`.
@@ -159,7 +163,7 @@ export class Strategy {
 One feature = one folder. Two files inside, mirroring the .NET layout:
 
 - `<feature>.ts` — `Input` type, `Output` type, the use case interface and the use case class.
-- `<feature>.validator.ts` — the validator function alone (colocated, still part of the Application layer).
+- `<feature>.validator.ts` — the validator alone, `<Feature>Validator.validate(input)` (colocated, still part of the Application layer).
 
 A use case is an **interface plus a class**, exactly like .NET: the ports it needs come in through
 the constructor, and `execute(input)` runs it. Callers depend on the interface only.
@@ -168,7 +172,7 @@ the constructor, and `execute(input)` runs it. Callers depend on the interface o
 // application/use-cases/listUserCustomColors/listUserCustomColors.ts
 import { Result } from '@application/common/Result';
 import { UserCustomDefinitionRepository } from '@application/ports/UserCustomDefinitionRepository';
-import { validateListUserCustomColors } from './listUserCustomColors.validator';
+import { ListUserCustomColorsValidator } from './listUserCustomColors.validator';
 
 // ---------- Input ----------
 export type ListUserCustomColorsInput = {
@@ -190,7 +194,7 @@ export class ListUserCustomColors implements ListUserCustomColorsUseCase {
   constructor(private readonly repo: UserCustomDefinitionRepository) {}
 
   async execute(input: ListUserCustomColorsInput): Promise<Result<ListUserCustomColorsOutput>> {
-    const validation = validateListUserCustomColors(input);
+    const validation = ListUserCustomColorsValidator.validate(input);
     if (!validation.isValid) {
       return Result.validation(validation.errorMessage); // narrowed: no `!` needed
     }
@@ -203,19 +207,28 @@ export class ListUserCustomColors implements ListUserCustomColorsUseCase {
 
 - Always call it through the instance: `useCase.execute(input)`. Never pass `useCase.execute`
   loose as a callback (`onClick={useCase.execute}`): `this` is lost. Wrap it in an arrow.
-- Validators and pure business rules stay functions (they hold no dependencies).
+- Validators and rules modules hold no dependencies, so they are not injected. They are a `const`
+  object named like the C# `static class`, called as `Name.method()`: the .NET
+  `ListUserCustomColorsValidator.Validate` is `ListUserCustomColorsValidator.validate` here.
+  - Methods never use `this` (they break when passed as a callback); call each other by name.
+  - A helper that shouldn't be public is an unexported function in the same file.
+  - "Now" comes in the input (`today`), never from `new Date()`; whoever calls it has the `Clock`.
+- In the front, the ViewModel calls the field validator to warn before sending (MVVM); the API
+  validates for real. A front use case exists only when there is real orchestration.
 
 ```ts
 // application/use-cases/listUserCustomColors/listUserCustomColors.validator.ts
 import { ValidationResult } from '@application/common/ValidationResult';
 import { ListUserCustomColorsInput } from './listUserCustomColors';
 
-export function validateListUserCustomColors(input: ListUserCustomColorsInput): ValidationResult {
-  if (!input.userId) {
-    return ValidationResult.fail('userId must not be empty.');
-  }
-  return ValidationResult.success;
-}
+export const ListUserCustomColorsValidator = {
+  validate(input: ListUserCustomColorsInput): ValidationResult {
+    if (!input.userId) {
+      return ValidationResult.fail('userId must not be empty.');
+    }
+    return ValidationResult.success;
+  },
+};
 ```
 
 ### Why classes, not functions
@@ -301,7 +314,7 @@ export interface Clock {
 }
 ```
 
-> The `Clock` port matters specifically: validators and use cases that compare against "now" (e.g. the StartTime/EndTime strategy validation) must take a `Clock`, never call `new Date()` directly — otherwise they are not deterministically testable. See the `testing-typescript` skill → "Time is injected".
+> The `Clock` port matters specifically: use cases and ViewModels that need "now" (e.g. the StartTime/EndTime strategy validation) take a `Clock` and pass the time into the validator's input, never call `new Date()` directly — otherwise they are not deterministically testable. See the `testing-typescript` skill → "Time is injected".
 
 ## Infrastructure: wrap every SDK
 
@@ -326,41 +339,128 @@ Benefits: Entities and Application never depend on `expo-*`; swapping or auditin
 
 API mapping (raw payload → DTO → entity) lives in `infrastructure/data/` — not in components, not on entities.
 
-## Interface Adapters: presentation (components, hooks, stores)
+## Presentation: MVVM
 
-Presentation is the **only** place React, Expo, and Zustand appear. It is the View side of the Interface Adapters layer.
+Every screen, in React, React Native and Svelte, has three parts:
 
-- **Screens / components** receive use case outputs and render them. No business rules, no direct SDK calls.
-- **Custom hooks** orchestrate: call a use case, push the `Result` into a store, expose state to the component. A hook is where presentation meets the composition root.
-- **Zustand stores** hold UI/view state. They do not contain business rules — those live in use cases.
+- **Model:** where the data comes from — the use case or client interface (`TraineesClient`),
+  entities, types.
+- **ViewModel:** one plain TS class per screen. It holds the screen state and decides what to show
+  (messages, `canSubmit`, sorting, field warnings). No React and no Svelte inside: no hooks, no runes.
+- **View:** the `.tsx` / `.svelte` file. Humble: it reads the state and calls ViewModel methods. No
+  `if` beyond show/hide, no formatting, no calls to clients.
 
-```tsx
-// interface-adapters/hooks/useCreateTwap.ts
-export function useCreateTwap() {
-  const { createTwapStrategy } = useUseCases(); // from composition root
-  const [error, setError] = useState<string | null>(null);
+Rules that keep it testable:
 
-  const submit = useCallback(
-    async (input: CreateTwapInput) => {
-      const result = await createTwapStrategy.execute(input); // the interface, never `new`
-      switch (result.status) {
-        case 'success':
-          return true;
-        case 'validation':
-        case 'conflict':
-        case 'notFound':
-          setError(result.error);
-          return false;
-      }
-    },
-    [createTwapStrategy]
-  );
+1. Everything outside comes through the constructor as an interface: use case or client, `Clock`,
+   navigation, toasts.
+2. The state is one immutable snapshot (`vm.state`), replaced with `set()` on each change.
+3. Actions return a `Promise` (`load()`, `submit()`), so a test can `await` them.
+4. The notification plumbing lives in one base class, `ViewModel<S>`. ViewModels only call `set()`.
+5. The View has no logic, so it has no unit tests. The ViewModel does.
 
-  return { submit, error };
+The base class serves both frameworks: Svelte's store contract (`subscribe` calls back right away
+and returns an unsubscribe) and React's `useSyncExternalStore` (`subscribe` + a stable snapshot —
+`state` is the same reference until `set()`).
+
+```ts
+// interface-adapters/common/ViewModel.ts
+export abstract class ViewModel<S> {
+  private readonly listeners = new Set<(state: S) => void>();
+
+  constructor(private current: S) {}
+
+  get state(): S {
+    return this.current;
+  }
+
+  getSnapshot = (): S => this.current;
+
+  subscribe = (listener: (state: S) => void): (() => void) => {
+    this.listeners.add(listener);
+    listener(this.current); // Svelte's store contract needs the immediate call
+    return () => this.listeners.delete(listener);
+  };
+
+  protected set(next: S): void {
+    this.current = next;
+    this.listeners.forEach((listener) => listener(next));
+  }
+}
+```
+
+```ts
+// interface-adapters/screens/trainees/TraineesViewModel.ts
+export type TraineesState = {
+  readonly names: readonly string[];
+  readonly error: string | null;
+  readonly loading: boolean;
+};
+
+export class TraineesViewModel extends ViewModel<TraineesState> {
+  constructor(private readonly client: TraineesClient) {
+    super({ names: [], error: null, loading: false });
+  }
+
+  async load(): Promise<void> {
+    this.set({ ...this.state, loading: true, error: null });
+    const result = await this.client.list();
+    switch (result.status) {
+      case 'success':
+        this.set({ names: result.value.map((t) => t.name).sort(), error: null, loading: false });
+        return;
+      case 'validation':
+      case 'conflict':
+      case 'notFound':
+        this.set({ ...this.state, error: result.error, loading: false });
+        return;
+    }
+  }
 }
 ```
 
 The `switch` has no `default` — TypeScript flags it if a new `OutputStatus` is added and not handled here.
+
+Svelte reads it with `$vm`; the route `src/routes/trainees/+page.svelte` only renders `<TraineesScreen />`:
+
+```svelte
+<!-- interface-adapters/screens/trainees/TraineesScreen.svelte -->
+<script lang="ts">
+  import { getContainer } from '@composition/context';
+  const vm = getContainer().traineesViewModel();
+  vm.load();
+</script>
+
+{#if $vm.error}<p role="alert">{$vm.error}</p>{/if}
+{#each $vm.names as name}<p>{name}</p>{/each}
+```
+
+React reads it with one generic hook:
+
+```tsx
+// interface-adapters/common/useViewModel.ts
+export function useViewModel<S>(vm: ViewModel<S>): S {
+  return useSyncExternalStore(vm.subscribe, vm.getSnapshot);
+}
+
+// interface-adapters/screens/trainees/TraineesScreen.tsx
+export function TraineesScreen() {
+  const { traineesViewModel } = useContainer();
+  const [vm] = useState(traineesViewModel); // one instance per mount
+  const state = useViewModel(vm);
+  useEffect(() => void vm.load(), [vm]);
+
+  return state.error ? <Text role="alert">{state.error}</Text> : <TraineeList names={state.names} />;
+}
+```
+
+- **Use case or client?** When the business logic is in the API (see `rdp:bff`), the ViewModel
+  calls the client interface directly; a front use case would only pass the call through. Add a
+  front use case only for real front-side work: several ports in one action, offline, local
+  storage, throttling a stream.
+- **Zustand** only for state shared across screens (session, selected account). A screen's own
+  state lives in its ViewModel.
+- Big pure pieces of a ViewModel (a mapping, a sort rule) can move to a plain function next to it.
 
 ## BFF (backend for frontend)
 
@@ -373,8 +473,8 @@ Two links, same as .NET:
 
 - **Use case ← ports:** the repositories and tech (HTTP, storage, clock) come in through the
   use case constructor, typed as port interfaces.
-- **Page / endpoint → use case:** it gets the use case **interface** and calls `execute`. It never
-  does `new` and never imports the class.
+- **ViewModel / endpoint → use case or client:** it gets the **interface** through its
+  constructor. It never does `new` and never imports the class.
 
 The only `new` lives in the **composition root**, a plain module written by hand (Pure DI). It is
 the TS equivalent of the .NET `AddApplication()/AddInfrastructure()` calls, and it is typed: a
@@ -384,11 +484,14 @@ missing dependency fails at compile time.
 // composition/container.ts
 export function buildContainer() {
   const strategyRepo = new SignalRStrategyRepository(/* ... */);
+  const traineesClient: TraineesClient = new HttpTraineesClient(/* ... */);
   const clock: Clock = new SystemClock();
 
   return {
     createTwapStrategy: new CreateTwapStrategy(strategyRepo, clock) as CreateTwapStrategyUseCase,
     // ...one entry per use case, typed as its interface
+    traineesViewModel: () => new TraineesViewModel(traineesClient),
+    // ...one factory per ViewModel: a new instance per screen
   };
 }
 ```
@@ -398,36 +501,39 @@ We don't add a DI container library. TS erases types at runtime, so autowiring c
 needs nothing. The framework only **delivers** the container to the adapters: React Context, Svelte
 `setContext`/`getContext`, or `event.locals` on a SvelteKit server.
 
-React Context provides the container to the tree; `useUseCases()` reads it.
+React Context provides the container to the tree; `useContainer()` reads it. In Svelte,
+`setContext` in the root layout and a `getContainer()` that calls `getContext`.
 
 ```tsx
-const UseCasesContext = createContext<ReturnType<typeof buildContainer> | null>(null);
-export const useUseCases = () => {
-  const ctx = useContext(UseCasesContext);
-  if (!ctx) throw new Error('useUseCases must be used within UseCasesProvider');
+const ContainerContext = createContext<ReturnType<typeof buildContainer> | null>(null);
+export const useContainer = () => {
+  const ctx = useContext(ContainerContext);
+  if (!ctx) throw new Error('useContainer must be used within ContainerProvider');
   return ctx;
 };
 ```
 
-> Tests never touch the container. They do `new CreateTwapStrategy(fakeRepo, fakeClock)` and call `execute` — that's the whole point of constructor injection.
+> Tests never touch the container. They do `new CreateTwapStrategy(fakeRepo, fakeClock)` or `new TraineesViewModel(fakeClient)` — that's the whole point of constructor injection.
 
 ## Don't
 
 - Don't import `react`, `expo-*`, `axios`, or `@microsoft/signalr` from `entities/` or `application/`. Define a port; implement it in `infrastructure/`.
 - Don't use `any`. Use `unknown` and narrow, or define a real type (see `.claude/rdp-standards.md`).
-- Don't put business rules in components, hooks, or Zustand stores. Those belong in use cases and entities.
+- Don't put business rules in components, ViewModels, hooks, or Zustand stores. Those belong in use cases and entities (or the API). A ViewModel holds presentation decisions only.
+- Don't put logic in a View (`.tsx` / `.svelte`). It binds to its ViewModel.
+- Don't use hooks or runes (`$state`, `$derived`) inside a ViewModel. It stays plain TS.
 - Don't throw from use cases for expected failures (validation, not-found). Return a `Result`.
 - Don't call `new Date()`, `Date.now()`, or `Math.random()` inside entities or application code. Inject a `Clock` / RNG port — otherwise it isn't testable.
 - Don't reach into a third-party SDK from more than one place. Wrap it once behind a port.
 - Don't create a `utils/` or `common/` dumping ground for misfit code. If a helper reasons about an entity's invariants, put it on the entity. If it touches IO/framework/serialization/time, define a port and implement it in `infrastructure/`. "I need a place for this helper" is a smell — find its real home.
-- Don't return raw API DTOs to components. Map to an entity or a view model in `infrastructure/data/`.
+- Don't return raw API DTOs to components. Map to an entity in `infrastructure/data/`; the ViewModel turns it into what the screen shows.
 - Don't add a DI container library. The composition root + Context is enough.
 - Don't `new` a use case, repository or SDK wrapper outside the composition root (tests excepted). Pages and endpoints get the interface.
 - Don't let the framework's style shape use cases, ports or entities (e.g. use cases as hooks or bare functions). Interface + class, constructor injection.
 
 ## Avoid duplicated business rules
 
-Write each business rule once, in a rules module (`entities/` or `application/`, e.g. `bodyRecordRules.dateProblem`). Use cases and validators call it; never copy it. A client may repeat the check only to warn before sending, using the same test cases. Before writing an `if` for a rule, search whether it already exists.
+Write each business rule once, in a rules module (`entities/` or `application/`, e.g. `BodyRecordRules.dateProblem`). Use cases and validators call it; never copy it. A client may repeat the check only to warn before sending, using the same test cases. Before writing an `if` for a rule, search whether it already exists.
 
 ## Quality checks (dryer, crapper)
 
@@ -437,9 +543,10 @@ Run both from the project root before finishing a change, in PowerShell (not Bas
 - **Duplication:** `PY -m dryer --changed`. It lists pairs of functions with the same
   structure (names and values ignored), closest first. Merge when both are the same rule and
   would change together. Many pairs can be one function copied into several files.
-- **CRAP:** first run the tests with LCOV coverage (Jest:
-  `npx jest --coverage --coverageReporters=lcov`), then
-  `PY -m crapper --use-existing-coverage --changed`. CRAP = complexity² × (1 − coverage)³ +
+- **CRAP:** first run the tests with LCOV coverage yourself (crapper can't start `npm`/`npx` on
+  Windows): Jest `npx jest --coverage --coverageReporters=lcov`, Vitest
+  `npx vitest run --coverage --coverage.reporter=lcov`, other test script
+  `npx c8 --reporter=lcov npm test`. Then `PY -m crapper --use-existing-coverage --changed`. CRAP = complexity² × (1 − coverage)³ +
   complexity. Bring each changed function under 10: split it, test it, or both. Without
   coverage the score is meaningless; don't use `--no-coverage` to judge.
 - If either one flags a problem in the code you changed, refactor before finishing (merge the

@@ -1,10 +1,10 @@
 ---
 name: testing-typescript
-description: RDP testing rules for TypeScript / React (Jest, AAA, fixed time, mock only at boundaries). Use when adding or changing tests in TS.
+description: RDP testing rules for TypeScript / React / Svelte (Jest or Vitest, AAA, fixed time, mock only at boundaries, ViewModel tests). Use when adding or changing tests in TS.
 ---
 # Testing — TypeScript / React (Native)
 
-How we write tests in TypeScript projects. This is the TS counterpart of the `testing` skill (.NET) — same discipline (AAA, fixed time, mock only at boundaries, one concept per test), idiomatic Jest stack.
+How we write tests in TypeScript projects. This is the TS counterpart of the `testing` skill (.NET) — same discipline (AAA, fixed time, mock only at boundaries, one concept per test), idiomatic Jest / Vitest stack.
 
 ## Tests are the guardrail — review them carefully
 
@@ -27,9 +27,14 @@ What to read for:
 
 ## Stack
 
-- **Jest** — the project's runner (`jest-expo` preset for RN). `describe` / `it` / `test`.
-- **`@testing-library/react-native`** for component tests — query by accessible role/text, assert on what the user sees. Never assert on component internals or instance state.
-- **Plain `expect(...)`** matchers — `toBe`, `toEqual`, `toHaveBeenCalledWith`, `toThrow`. No custom assertion libraries beyond `@testing-library/jest-native` matchers (`toBeVisible`, `toHaveTextContent`).
+- **The runner:**
+  - React Native / Expo: **Jest** (`jest-expo` preset).
+  - Svelte / SvelteKit and Vite web projects: **Vitest**. It reads the project's Vite config and
+    runs our constructors (`constructor(private readonly …)`), which Node's own type stripping
+    rejects. Same API as Jest, with `vi.fn()` in place of `jest.fn()`.
+- **No render library for screens.** Views are humble (MVVM, see `clean-architecture-typescript`),
+  so there is nothing to test in them. Test the ViewModel.
+- **Plain `expect(...)`** matchers — `toBe`, `toEqual`, `toHaveBeenCalledWith`, `toThrow`. No custom assertion libraries.
 - **Hand-built fakes for ports** over `jest.mock` of SDKs. Because boundaries are interfaces (see the `clean-architecture-typescript` skill), a fake is a small object literal implementing the port — clearer than module mocking.
 - **Build test data by hand:** `new Strategy({ ... })`, `{ userId: 'u-1' }`. No factory libraries, no `faker`.
 - **Time is fixed** (see below).
@@ -38,9 +43,9 @@ What to read for:
 
 Mirrors `.claude/rdp-standards.md` → "Testability":
 
-- **Unit-test:** use cases, validators, entity methods, mappers (raw→DTO→entity), pure helpers. No real I/O — every boundary is a fake port injected into the use case.
-- **Don't unit-test:** the port implementations themselves (`SignalRStrategyRepository`, `ExpoSecureStorage`). They cross a boundary; cover them with integration tests against a test server / emulator, or accept they're thin enough to verify by inspection.
-- **Component tests:** render with React Native Testing Library, drive via user interactions, assert on output. Inject fake use cases via the Context provider.
+- **Unit-test:** use cases, ViewModels, validators, entity methods, mappers (raw→DTO→entity), pure helpers. No real I/O — every boundary is a fake port injected through the constructor.
+- **Don't unit-test:** the port implementations themselves (`SignalRStrategyRepository`, `ExpoSecureStorage`, `HttpTraineesClient`). They cross a boundary; cover them with integration tests against a test server / emulator, or accept they're thin enough to verify by inspection.
+- **Don't unit-test Views** (`.tsx` / `.svelte`). They have no logic; the ViewModel does.
 
 ## Naming
 
@@ -59,17 +64,17 @@ When several tests do the same thing with different inputs, collapse them with `
 
 ```ts
 // application/use-cases/listGoals/listGoals.test.ts
-import { listGoals } from './listGoals';
+import { ListGoals } from './listGoals';
 import { GoalRepository } from '@application/ports/GoalRepository';
 
-describe('listGoals', () => {
+describe('ListGoals', () => {
   it('returns a validation error when userId is empty', async () => {
     // Arrange
     const repo: jest.Mocked<GoalRepository> = { list: jest.fn() };
     const input = { userId: '', status: 'all', skip: 0, take: 10 } as const;
 
     // Act
-    const output = await listGoals(input, { repo });
+    const output = await new ListGoals(repo).execute(input);
 
     // Assert
     expect(output.status).toBe('validation');
@@ -84,7 +89,7 @@ describe('listGoals', () => {
     const input = { userId: 'u-1', status: 'all', skip: 0, take: 10 } as const;
 
     // Act
-    const output = await listGoals(input, { repo });
+    const output = await new ListGoals(repo).execute(input);
 
     // Assert
     expect(output.status).toBe('success');
@@ -131,10 +136,10 @@ Domain code never calls `new Date()` / `Date.now()` directly — it takes a `Clo
 
 ```ts
 const clock: Clock = { now: () => new Date('2026-05-29T10:00:00Z') };
-const output = await createTwapStrategy(input, { repo, clock });
+const output = await new CreateTwapStrategy(repo, clock).execute(input);
 ```
 
-For presentation code that genuinely depends on timers (debounce, intervals), use Jest fake timers — never real waits:
+For ViewModel code that genuinely depends on timers (debounce, intervals), use fake timers (`jest.useFakeTimers()` / `vi.useFakeTimers()`) — never real waits:
 
 ```ts
 jest.useFakeTimers();
@@ -142,34 +147,46 @@ jest.useFakeTimers();
 jest.advanceTimersByTime(1000);
 ```
 
-Never use a real delay/`setTimeout`-based wait to "let async work finish." Await the promise, or use `await waitFor(...)` from Testing Library.
+Never use a real delay/`setTimeout`-based wait to "let async work finish." Await the promise.
 
-## Component tests
+## ViewModel tests
 
-Render through the public surface; assert on what the user sees. Inject fake use cases via the Context provider so no real SDK is touched.
+Build the ViewModel with `new` and fake ports, `await` the action, check `vm.state`. No rendering.
 
-```tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+```ts
+// interface-adapters/screens/trainees/TraineesViewModel.test.ts
+describe('TraineesViewModel', () => {
+  it('lists the names sorted after load', async () => {
+    // Arrange
+    const client: TraineesClient = {
+      list: async () => Result.success([{ name: 'Bia' }, { name: 'Ana' }]),
+    };
+    const vm = new TraineesViewModel(client);
 
-it('shows the validation message when submit fails', async () => {
-  // Arrange
-  const createTwapStrategy = jest.fn().mockResolvedValue({ status: 'validation', error: 'startTime after endTime' });
-  render(
-    <UseCasesContext.Provider value={{ createTwapStrategy } as any}>
-      <CreateTwapScreen />
-    </UseCasesContext.Provider>
-  );
+    // Act
+    await vm.load();
 
-  // Act
-  fireEvent.press(screen.getByText('Enviar'));
+    // Assert
+    expect(vm.state.names).toEqual(['Ana', 'Bia']);
+    expect(vm.state.error).toBeNull();
+  });
 
-  // Assert
-  await waitFor(() => expect(screen.getByText('startTime after endTime')).toBeVisible());
+  it('shows the error when the API rejects', async () => {
+    // Arrange
+    const client: TraineesClient = { list: async () => Result.validation('No access.') };
+    const vm = new TraineesViewModel(client);
+
+    // Act
+    await vm.load();
+
+    // Assert
+    expect(vm.state.error).toBe('No access.');
+    expect(vm.state.loading).toBe(false);
+  });
 });
 ```
 
-- Query by role / accessible text, not by `testID` unless there's no accessible handle.
-- Don't reach into component state or props. Drive it like a user and read the rendered output.
+- Check the state the screen would show, not private fields or how many times `set()` ran.
 
 ## Coverage expectations
 
@@ -177,15 +194,16 @@ it('shows the validation message when submit fails', async () => {
 - Every validator has tests for each rule (valid + each failure).
 - Entity invariant methods (`canBeCancelled`, etc.) have a test per branch.
 - Mappers have a round-trip / known-input test.
+- Every ViewModel has tests for each action and the state it shows for each `Result` status.
 
-When adding tests to a project with low coverage, start with use cases and validators — that is where business risk concentrates, and they take their ports through the constructor, so they're cheap to cover with fakes.
+When adding tests to a project with low coverage, start with use cases, validators and ViewModels — that is where business risk concentrates, and they take their ports through the constructor, so they're cheap to cover with fakes.
 
 ## Don't
 
-- Don't use `any` to silence the type checker in tests, except at a Context provider seam where a partial fake is intentional (cast narrowly, not the whole tree).
+- Don't use `any` to silence the type checker in tests. A fake implements the port interface.
 - Don't add `faker`, `test-data-bot`, or factory libraries. Build data by hand.
 - Don't `jest.mock('expo-secure-store')` or mock SDKs module-wide when a typed fake port does the job — mock at the boundary you own.
-- Don't use real timers or sleeps to wait for async work. Await, or use fake timers / `waitFor`.
+- Don't use real timers or sleeps to wait for async work. Await, or use fake timers.
 - Don't assert on implementation details (internal state, private fields, call order that doesn't matter).
 - Don't mock the unit under test or pure domain functions.
 - Don't leave `it.skip` / `xit` marked "broken" in the suite. Fix it or delete it.
