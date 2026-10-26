@@ -13,13 +13,20 @@ Stack: TypeScript + SvelteKit (front + BFF) and .NET <version> + ASP.NET Core We
 ## Layout
 
 ```
-web/                                   SvelteKit: front (MVVM) + BFF, see the Svelte + BFF layout
-  src/interface-adapters/screens/<feature>/
-  src/lib/server/bff/
-  src/hooks.server.ts
-api/                                   ASP.NET Core, see the back-end layout
-  src/<App>.Entities  src/<App>.Application  src/<App>.Infrastructure.<X>  src/<App>.Api
-  tests/<App>.Tests.Unit  tests/<App>.Tests.Integration
+web/                                         SvelteKit: front (MVVM) + BFF
+  src/entities/  src/application/  src/infrastructure/   front, per clean-architecture-typescript
+  src/interface-adapters/screens/<feature>/  XViewModel.ts, XScreen.svelte, tests
+  src/composition/                           container + context (front)
+  src/routes/                                +page.svelte only renders a screen
+  src/lib/server/bff/                        SignIn, SessionRefresher, SignOut, ApiProxy, ports, PinoLogger
+  src/hooks.server.ts                        BFF entry + its composition root
+api/                                         ASP.NET Core, per clean-architecture
+  src/<App>.Entities
+  src/<App>.Application                      use cases, ports, validators, OutputStatus, ValidationResult
+  src/<App>.Infrastructure.<X>               one project per concern
+  src/<App>.Api                              controllers, Program.cs (composition root)
+  tests/<App>.Tests.Unit
+  tests/<App>.Tests.Integration
 ```
 
 Build:

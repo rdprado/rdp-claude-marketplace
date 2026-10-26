@@ -38,8 +38,8 @@ Set up this project with the RDP AI standards.
        Still to fill: Stack, Git flow, Docs, Sonar, Build commands
        ```
      - Step 3: compare `CLAUDE.md` with the matching template (see step 3). If the profile
-       has a `Template:` line, also compare its `## Template: …` section with the current
-       stack file and offer the changes.
+       has a `Template:` line, also compare its `## Template: …` and `## Layout` sections with
+       the current stack file and offer the changes (keeping the app name already filled in).
      - Step 4: compare `.claude/rdp-standards.md` and the RDP block with
        `${CLAUDE_PLUGIN_ROOT}/templates/` (see step 4).
      - Steps 5–6 as written (both skip what is already done).
@@ -94,6 +94,8 @@ Set up this project with the RDP AI standards.
    project root as `CLAUDE.md`, filling in the GitHub repo and the tag. Then apply the stack
    file, if there is one:
    - `Stack:` line → the file's first line (ask for `<version>`, suggest the latest LTS).
+   - `<App>` in the Layout → the app name, in PascalCase (ask; suggest it from the folder
+     name, e.g. `market-place-experimentation` → `MarketPlaceExperimentation`).
    - `Template:` line → the menu name (e.g. `Svelte + BFF`); `N/A` for 5.
    - Its `## Template: …` section (and `## Layout`, when it has one) → right after the
      Project profile.
