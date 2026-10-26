@@ -1,7 +1,7 @@
 {
   "name": "rdp",
   "description": "RDP AI standards: /rdp:setup-repo and every RDP command keep each project's CLAUDE.md and .claude/rdp-standards.md current; the standards load as skills.",
-  "version": "2.11.7",
+  "version": "2.11.8",
   "author": {
     "name": "RDP Engineering"
   }

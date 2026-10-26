@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-typescript
-description: RDP rules for TypeScript / React / React Native — language, React, clean architecture, quality checks. Use when writing, reviewing or fixing TS/TSX code.
+description: "RDP rules for TypeScript / JavaScript — React, React Native, Svelte / SvelteKit and the BFF: language, clean architecture, use cases, quality checks. Use when writing, reviewing or fixing TS, TSX, JS or .svelte code."
 ---
 # Clean Architecture — TypeScript / React (Native)
 
