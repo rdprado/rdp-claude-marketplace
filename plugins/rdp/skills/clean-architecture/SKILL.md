@@ -225,6 +225,11 @@ xUnit + Moq. Two projects:
 
 Test class names mirror the use case or endpoint. One `Arrange / Act / Assert` per test. No shared mutable fixture state.
 
+## Auth and BFF
+
+Sign-in, tokens, cookies and identity provider calls (e.g. `AuthController`): load `rdp:bff` with
+the Skill tool and follow it.
+
 ## Don't
 
 - Don't add MediatR, AutoMapper, or FluentValidation. Mapping is one line in the controller or use case; validation is a static class returning `ValidationResult`.

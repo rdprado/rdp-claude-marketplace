@@ -16,6 +16,7 @@ Topic rules are skills in the `rdp` plugin. Before starting a task listed below,
 | Adding or changing tests | `testing` | `testing-typescript` |
 | Adding or changing configuration keys / environments | `configuration` | — |
 | Adding a SignalR hub or touching hub code | `signalr` | — |
+| Touching sign-in, tokens, cookies, identity provider calls or a BFF | `bff` | `bff` |
 | Running `ci/verify.sh`, reading a Sonar quality gate or issues, or touching Sonar config | `sonar` | `sonar` |
 | Touching CI/CD YAML, `ci/` scripts, deploys, or pipeline secrets | `pipelines` | `pipelines` |
 | Committing, branching, or opening a PR | `git-flow` | `git-flow` |
