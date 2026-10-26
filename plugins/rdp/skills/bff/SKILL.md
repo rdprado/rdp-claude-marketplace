@@ -78,15 +78,19 @@ before users report them. One `401` is normal (sessions expire); the signal is t
 
 **Logger and where the logs go:**
 
+The logging library is **pino**. RDP hasn't chosen the observability tool (where logs and errors
+end up) yet: pick it per project, with the team; the tool names below are examples.
+
 - Classes log through a `Logger` port (`application/ports/Logger.ts`); the adapter is
-  `PinoLogger` over **pino**, with `redact` on `token`, `cookie`, `authorization`, `code` as a
-  safety net. Not `console.*` in production: no levels, no redaction.
-- pino writes JSON lines to **stdout**, never to a file. The host collects them: journald under
-  systemd (`journalctl -u <service> -o cat`), `docker logs` in a container. An agent (Grafana
-  Alloy → Loki, the Datadog agent) ships them to the tool. The app knows nothing of the destination.
-- Unexpected errors also go to the monitoring tool (e.g. Sentry) through the `Monitoring` port,
-  with the stack.
-- .NET (BFF inside the API): `ILogger<T>` is already the port; same stdout/journald path.
+  `PinoLogger` over pino, with `redact` on `token`, `cookie`, `authorization`, `code` as a safety
+  net. Not `console.*` in production: no levels, no redaction.
+- pino writes JSON lines to **stdout**, never to a file. The host collects them (e.g.
+  journald under systemd, `docker logs` in a container) and an agent ships them to whatever log
+  tool the project uses. The app knows nothing of the destination, so changing the tool touches no
+  code.
+- Unexpected errors also go to the project's monitoring tool through the `Monitoring` port, with
+  the stack.
+- .NET (BFF inside the API): `ILogger<T>` is already the port; same stdout path.
 
 ```ts
 // application/ports/Logger.ts
@@ -107,6 +111,7 @@ structured JSON to stdout:
 
 - `route` is the template, never the real path: paths can carry emails or ids.
 - `upstreamMs` = time spent in the API, so "BFF slow" and "API slow" are told apart.
+- `userId` is the opaque id from the token (`sub`), never an email or name.
 
 **2. Auth events**, logged by the classes that own them:
 
@@ -124,7 +129,8 @@ structured JSON to stdout:
 
 **4. Tracing:** the BFF reads the W3C `traceparent` header (or creates one when the browser sent
 none), forwards it to the API, and every line carries its `traceId`. Use `traceparent`, not a
-custom header: Sentry, Datadog, Grafana and .NET (`Activity`) already propagate it.
+custom header: it's the W3C standard, and .NET (`Activity`) and the common monitoring tools already
+propagate it.
 
 **5. Alerts** on rates, never on single events: `signin.failed` and `refresh.failed` above normal,
 any `refresh.reused`, `proxy.failed`, `idp.unavailable`.
@@ -132,9 +138,10 @@ any `refresh.reused`, `proxy.failed`, `idp.unavailable`.
 **Never logged:** tokens, cookies, sign-in codes, emails or other personal data, request and
 response bodies.
 
-**In the front:** the shared HTTP adapter adds a breadcrumb per request (route, status, duration)
-and the ViewModel's `catch` reports unexpected failures. A breadcrumb travels only with a later
-error, so rate alerts come from the BFF logs, not the front. Validation and not-found results are not
+**In the front:** the shared HTTP adapter records each request (route, status, duration) as context
+for the `Monitoring` port (a "breadcrumb" in Sentry's terms), and the ViewModel's `catch` reports
+unexpected failures. That context travels only with a later error, so rate alerts come from the BFF
+logs, not the front. Validation and not-found results are not
 logged: the user already sees them.
 
 **BFF inside the API (2-tier):** the same events and fields, logged by the API (.NET structured

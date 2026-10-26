@@ -25,15 +25,16 @@ Set up this project with the RDP AI standards.
        tag), re-detect it from the files and keep it if it still matches.
        Ask only for placeholders (`<...>`) and for values that no longer match the
        files (e.g. profile says .NET but `package.json` now exists too).
-       Before asking anything, show what is kept, with each value and one line on
+       Before asking anything, show what is already set, with each value and one line on
        what it is, e.g.:
        ```
-       Kept (already set):
+       Already set (won't ask again):
        - Legacy: NO (modern project, clean architecture)
        - GitHub repo: rdprado/stimulus-app (where story issues are created)
        - Tag: [MarketPlaceExperimentation] (prefix of every issue title)
        - GitHub mapping: rdprado/stimulus-app · docs/ · no project board
        - RDP standards: up to date (2.11.1)
+       - dryer/crapper: installed (or: n/a, .NET only, Sonar is the check)
        Still to fill: Stack, Git flow, Docs, Sonar, Build commands
        ```
      - Step 3: compare `CLAUDE.md` with the matching template (see step 3).
