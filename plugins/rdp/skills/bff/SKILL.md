@@ -48,6 +48,10 @@ The entry reads the request, calls one class, and writes the response. No `if` t
 - `SignOut` — revokes the refresh token at the identity provider, clears the cookies.
 - `ApiProxy` — forwards `/api/*` to the API with `Authorization: Bearer`.
 
+Errors: the API's error body (`{ "error": { "code" } }`) passes through unchanged. The BFF's own
+errors use the same shape with its own codes (`session-expired`, `api-unavailable`), never an
+exception or a stack.
+
 Ports: `IdentityProviderClient`, `ApiClient`, `Clock`. Adapters: `HttpIdentityProviderClient`, `FetchApiClient`.
 Composition root: one per process, in the entry module (e.g. `hooks.server.ts`), the only `new`.
 

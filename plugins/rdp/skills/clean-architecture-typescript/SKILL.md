@@ -299,7 +299,8 @@ export const Result = {
 };
 ```
 
-`fields` carries per-field messages when the API sends them (`{ email: 'already taken' }`), so the screen can show each one under its field.
+`error` is the API's code (`goal-not-found`), never a sentence. `fields` carries a code per field when the
+API sends them (`{ email: 'already-taken' }`), so the screen can show each one under its field.
 
 `details` carries the body of a conflict when the screen needs it, e.g. what changed meanwhile, or what the user must
 confirm before saving (`{ error: 'confirmation_required', ... }`). The ViewModel narrows it; `unknown`, never `any`.
@@ -597,9 +598,10 @@ and only the `fetch` call is left untested:
 // infrastructure/data/trainees/toResult.ts
 export function toResult<T>(status: number, body: ApiBody<T>): Result<T> {
   if (status >= 200 && status < 300) return Result.success(body.data as T);
-  if (status === 400) return Result.validation(body.message, body.fields);
-  if (status === 404) return Result.notFound(body.message);
-  if (status === 409) return Result.conflict(body.message, body.details);
+  // error body: { error: { code, fields?, details? } }
+  if (status === 400) return Result.validation(body.error.code, body.error.fields);
+  if (status === 404) return Result.notFound(body.error.code);
+  if (status === 409) return Result.conflict(body.error.code, body.error.details);
   throw new UnexpectedResponseError(status); // 5xx and anything else: unexpected
 }
 ```
@@ -665,8 +667,9 @@ export function assertNever(value: never): never {
   ViewModel's constructor, so a test checks them with fakes.
 - The `catch` is the screen's safety net: without it a failure leaves `saving: true` forever.
 - A session expiry is not a bug: never report it to monitoring.
-- The ViewModel's own text is an i18n key (`'errors.unexpected'`); the View translates it. Messages
-  from the API (`result.error`, `fields`) come in the user's language already.
+- The ViewModel's own text is an i18n key (`'errors.unexpected'`); the View translates it. The API
+  sends codes (`result.error`, `fields`), and the View translates `errors.<code>`. A code with no
+  translation shows `errors.unexpected`; never show the raw code or the response body.
 - Every `switch` on a status ends with `default: assertNever(x)`. Without it, a method that returns
   `void` compiles even when a new status is not handled.
 

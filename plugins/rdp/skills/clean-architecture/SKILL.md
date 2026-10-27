@@ -55,9 +55,9 @@ public class GoalsController(IRegisterGoalUseCase registerGoal) : ControllerBase
         return output.Status switch
         {
             OutputStatus.Success    => Ok(output.ToResponse()),
-            OutputStatus.Validation => BadRequest(output.ErrorMessage),
-            OutputStatus.NotFound   => NotFound(output.ErrorMessage),
-            _                       => StatusCode(500),
+            OutputStatus.Validation => ApiErrors.Of(400, output.ErrorCode),
+            OutputStatus.NotFound   => ApiErrors.Of(404, output.ErrorCode),
+            _                       => ApiErrors.Of(500, ErrorCodes.Unexpected),
         };
     }
 }
@@ -88,12 +88,12 @@ public sealed record ListUserCustomColorsInput(Guid UserId);
 
 // ---------- Output ----------
 public sealed record ListUserCustomColorsOutput(
-    bool IsSuccess, string ErrorMessage, OutputStatus Status, IReadOnlyList<string> Colors)
+    bool IsSuccess, string ErrorCode, OutputStatus Status, IReadOnlyList<string> Colors)
 {
     public static ListUserCustomColorsOutput Success(IReadOnlyList<string> colors)
         => new(true, string.Empty, OutputStatus.Success, colors);
-    public static ListUserCustomColorsOutput Validation(string error)
-        => new(false, error, OutputStatus.Validation, []);
+    public static ListUserCustomColorsOutput Validation(string errorCode)
+        => new(false, errorCode, OutputStatus.Validation, []);
 }
 
 // ---------- Interface ----------
@@ -110,7 +110,7 @@ public sealed class ListUserCustomColorsUseCase(IUserCustomDefinitionRepository 
     {
         var validation = ListUserCustomColorsValidator.Validate(input);
         if (!validation.IsValid)
-            return ListUserCustomColorsOutput.Validation(validation.ErrorMessage);
+            return ListUserCustomColorsOutput.Validation(validation.ErrorCode);
 
         var colors = await repo.ListColorsByUserAsync(input.UserId);
         return ListUserCustomColorsOutput.Success(colors);
@@ -134,9 +134,35 @@ public static class ListUserCustomColorsValidator
 
 ## Output, not exceptions
 
-Use cases don't throw for expected failure paths (validation, not-found, conflict). They return an `Output` carrying `OutputStatus`, an error message, and payload fields; the controller's `switch` maps `OutputStatus` to HTTP status.
+Use cases don't throw for expected failure paths (validation, not-found, conflict). They return an `Output` carrying `OutputStatus`, an error code, and payload fields; the controller's `switch` maps `OutputStatus` to HTTP status.
 
 Exceptions are reserved for unexpected failures (DB down, third-party 500).
+
+## Errors on the wire: codes, not messages
+
+The API never sends an exception, a stack or a sentence. Every error is a stable kebab-case code the
+client translates:
+
+```json
+{ "error": { "code": "goal-name-required", "fields": { "name": "required" } } }
+```
+
+- Codes are constants in `Application/Common/ErrorCodes.cs` (`GoalNotFound = "goal-not-found"`).
+  The `Output` and `ValidationResult` carry the code, never text for the user.
+- `fields` only on validation, when a field is to blame.
+- HTTP status from `OutputStatus`: `Validation` 400, `NotFound` 404, `Conflict` 409.
+- The global exception handler returns 500 `{ "error": { "code": "unexpected" } }` and logs the full
+  exception. Never `ex.Message` or the stack, in any environment.
+- One shape for every endpoint: no `{ message }`, `{ error: "..." }` or bare strings.
+
+```csharp
+// Api/Common/ApiErrors.cs
+public static class ApiErrors
+{
+    public static IActionResult Of(int status, string code, IReadOnlyDictionary<string, string>? fields = null)
+        => new ObjectResult(new { error = new { code, fields } }) { StatusCode = status };
+}
+```
 
 ## Shared primitives
 
@@ -168,24 +194,24 @@ public sealed record ValidationResult
 {
     public static readonly ValidationResult Success = new(true, null);
 
-    public static ValidationResult Fail(string message) => new(false, message);
+    public static ValidationResult Fail(string errorCode) => new(false, errorCode);
 
-    private ValidationResult(bool isValid, string? errorMessage)
+    private ValidationResult(bool isValid, string? errorCode)
     {
         IsValid = isValid;
-        ErrorMessage = errorMessage;
+        ErrorCode = errorCode;
     }
 
-    // Tells the compiler ErrorMessage is non-null whenever IsValid is false,
+    // Tells the compiler ErrorCode is non-null whenever IsValid is false,
     // so callers don't need `!` after checking IsValid.
-    [MemberNotNullWhen(false, nameof(ErrorMessage))]
+    [MemberNotNullWhen(false, nameof(ErrorCode))]
     public bool IsValid { get; }
 
-    public string? ErrorMessage { get; }
+    public string? ErrorCode { get; }
 }
 ```
 
-Validators return `ValidationResult.Success` or `ValidationResult.Fail("...")`. Use cases check `IsValid` and, on failure, build an `Output` via the matching factory (e.g. `Output.Validation(result.ErrorMessage)` — no `!` needed after the check).
+Validators return `ValidationResult.Success` or `ValidationResult.Fail(ErrorCodes.X)`. Use cases check `IsValid` and, on failure, build an `Output` via the matching factory (e.g. `Output.Validation(result.ErrorCode)` — no `!` needed after the check).
 
 ## Infrastructure: EF Core, repository per aggregate
 
