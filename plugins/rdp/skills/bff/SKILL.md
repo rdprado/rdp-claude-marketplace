@@ -90,7 +90,8 @@ end up) yet: pick it per project, with the team; the tool names below are exampl
   code.
 - Unexpected errors also go to the project's monitoring tool through the `Monitoring` port, with
   the stack.
-- .NET (BFF inside the API): `ILogger<T>` is already the port; same stdout path.
+- .NET (BFF inside the API): `ILogger<T>` is already the port, with Serilog behind it
+  (`clean-architecture` skill → Logging); same stdout path.
 
 ```ts
 // application/ports/Logger.ts

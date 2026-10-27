@@ -219,6 +219,22 @@ public static IServiceCollection AddApplication(this IServiceCollection services
 
 In `Program.cs`, register a global exception handler (ASP.NET `UseExceptionHandler` middleware).
 
+## Logging: Serilog
+
+Serilog (`Serilog.AspNetCore`), wired only in `Program.cs`. Classes use `ILogger<T>`, never Serilog.
+
+```csharp
+builder.Host.UseSerilog((ctx, sp, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new CompactJsonFormatter()));   // JSON to stdout, never a file
+app.UseSerilogRequestLogging();
+```
+
+- Message templates: `LogInformation("Order {OrderId} sent", id)`, not interpolation.
+- Unexpected exceptions are logged once, by the global exception handler.
+- Tests: `NullLogger<T>.Instance`.
+
 ## Tests
 
 xUnit + Moq. Two projects:

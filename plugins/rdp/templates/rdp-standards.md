@@ -73,6 +73,7 @@ Topic rules are skills in the `rdp` plugin. Before starting a task listed below,
 
 ## Logging
 
+- Library: Serilog behind `ILogger<T>` in C# back ends (`clean-architecture` skill), pino in TypeScript (`bff` skill).
 - Use structured logging (key-value pairs, not string concatenation).
 - Don't log secrets, tokens, or PII.
 - Pick a log level deliberately: `Info` for business events, `Warning` for degraded/recoverable state, `Error` for failures requiring attention.
