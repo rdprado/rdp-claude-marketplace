@@ -221,16 +221,34 @@ In `Program.cs`, register a global exception handler (ASP.NET `UseExceptionHandl
 
 ## Logging: Serilog
 
-Serilog (`Serilog.AspNetCore`), wired only in `Program.cs`. Classes use `ILogger<T>`, never Serilog.
+Serilog (`Serilog.AspNetCore`, `Serilog.Sinks.File`), wired only in `Program.cs`. Classes use
+`ILogger<T>`, never Serilog. Console and a daily file in every environment; the file path and the
+levels come from appsettings.
 
 ```csharp
-builder.Host.UseSerilog((ctx, sp, cfg) => cfg
-    .ReadFrom.Configuration(ctx.Configuration)
+const string logTemplate =
+    "[{Timestamp:HH:mm:ss} {Level:u3}] [{RequestId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
+var logFilePath = builder.Configuration["Logs:FilePath"]
+    ?? throw new InvalidOperationException("Logs:FilePath is missing in appsettings.");
+builder.Services.AddSerilog((services, logger) => logger
+    .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console(new CompactJsonFormatter()));   // JSON to stdout, never a file
-app.UseSerilogRequestLogging();
+    .WriteTo.Console(outputTemplate: logTemplate)
+    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, outputTemplate: logTemplate));
+
+app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =>
+    ex != null || http.Response.StatusCode > 499 ? LogEventLevel.Error
+    : elapsed > 5000 ? LogEventLevel.Warning
+    : LogEventLevel.Information);
 ```
 
+```json
+"Logs": { "FilePath": "C:/logs/<app>/log.txt" },
+"Serilog": { "MinimumLevel": { "Default": "Information", "Override": { "Microsoft": "Warning" } } }
+```
+
+- The file path is outside the app folder, so a deploy doesn't wipe it.
+- `UseSerilogRequestLogging` after the static files, so pages with a token in the URL aren't logged.
 - Message templates: `LogInformation("Order {OrderId} sent", id)`, not interpolation.
 - Unexpected exceptions are logged once, by the global exception handler.
 - Tests: `NullLogger<T>.Instance`.
