@@ -222,19 +222,26 @@ In `Program.cs`, register a global exception handler (ASP.NET `UseExceptionHandl
 ## Logging: Serilog
 
 Serilog (`Serilog.AspNetCore`, `Serilog.Sinks.File`), wired only in `Program.cs`. Classes use
-`ILogger<T>`, never Serilog. A daily file in every environment; the console only in Development.
-The file path and the levels come from appsettings.
+`ILogger<T>`, never Serilog. Two daily files in every environment: the app log and the audit log
+(category `Audit`). The console only in Development. Paths, retention and levels come from appsettings.
 
 ```csharp
 const string logTemplate =
     "[{Timestamp:HH:mm:ss} {Level:u3}] [{RequestId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
-var logFilePath = builder.Configuration["Logs:FilePath"]
-    ?? throw new InvalidOperationException("Logs:FilePath is missing in appsettings.");
+var logs = builder.Configuration.GetSection("Logs").Get<LogsOptions>()
+    ?? throw new InvalidOperationException("Logs is missing in appsettings.");
 builder.Services.AddSerilog((services, logger) =>
 {
     logger.ReadFrom.Configuration(builder.Configuration)
         .Enrich.FromLogContext()
-        .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, outputTemplate: logTemplate);
+        .WriteTo.Logger(app => app
+            .Filter.ByExcluding(Matching.FromSource("Audit"))
+            .WriteTo.File(logs.FilePath, rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: logs.RetainedDays, outputTemplate: logTemplate))
+        .WriteTo.Logger(audit => audit
+            .Filter.ByIncludingOnly(Matching.FromSource("Audit"))
+            .WriteTo.File(logs.AuditFilePath, rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: logs.RetainedDays, outputTemplate: logTemplate));
     if (builder.Environment.IsDevelopment())
         logger.WriteTo.Console(outputTemplate: logTemplate);
 });
@@ -246,16 +253,18 @@ app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =
 ```
 
 ```json
-"Logs": { "FilePath": "C:/logs/<app>/log.txt" },
+"Logs": { "FilePath": "C:/logs/<app>/log.txt", "AuditFilePath": "C:/logs/<app>/audit.txt", "RetainedDays": 90 },
 "Serilog": { "MinimumLevel": { "Default": "Information", "Override": { "Microsoft": "Warning" } } }
 ```
 
-- The file path is outside the app folder, so a deploy doesn't wipe it.
+- Paths outside the app folder, so a deploy doesn't wipe them. Serilog deletes files beyond
+  `RetainedDays` when it rolls (it counts files: one per day).
 - `UseSerilogRequestLogging` after the static files, so pages with a token in the URL aren't logged.
-- Action log: an `ActionLogMiddleware` records every write (`POST/PUT/PATCH/DELETE /api/*`) after
-  its response: who (email claim), the action (method + route template), the route ids, the status and
-  the request/response JSON, through a `RecordAction` use case that hides sensitive fields. Reads and
-  non-JSON bodies are skipped. A failure to record is logged and never fails the request.
+- Audit: an `ActionLogMiddleware` logs every write (`POST/PUT/PATCH/DELETE /api/*`) after its response
+  to the `Audit` category (`loggerFactory.CreateLogger("Audit")`): the user id (`sub`, never the email),
+  the action (method + route template), the route ids, the status and the request JSON with sensitive
+  fields hidden. Reads are skipped. A failure to log never fails the request.
+- LGPD: no email, CPF, tokens or other personal data in either file; the user id (`sub`) is enough.
 - Message templates: `LogInformation("Order {OrderId} sent", id)`, not interpolation.
 - Unexpected exceptions are logged once, by the global exception handler.
 - Tests: `NullLogger<T>.Instance`.
