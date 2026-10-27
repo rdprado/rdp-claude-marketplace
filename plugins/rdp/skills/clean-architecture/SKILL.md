@@ -222,19 +222,22 @@ In `Program.cs`, register a global exception handler (ASP.NET `UseExceptionHandl
 ## Logging: Serilog
 
 Serilog (`Serilog.AspNetCore`, `Serilog.Sinks.File`), wired only in `Program.cs`. Classes use
-`ILogger<T>`, never Serilog. Console and a daily file in every environment; the file path and the
-levels come from appsettings.
+`ILogger<T>`, never Serilog. A daily file in every environment; the console only in Development.
+The file path and the levels come from appsettings.
 
 ```csharp
 const string logTemplate =
     "[{Timestamp:HH:mm:ss} {Level:u3}] [{RequestId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
 var logFilePath = builder.Configuration["Logs:FilePath"]
     ?? throw new InvalidOperationException("Logs:FilePath is missing in appsettings.");
-builder.Services.AddSerilog((services, logger) => logger
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate: logTemplate)
-    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, outputTemplate: logTemplate));
+builder.Services.AddSerilog((services, logger) =>
+{
+    logger.ReadFrom.Configuration(builder.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, outputTemplate: logTemplate);
+    if (builder.Environment.IsDevelopment())
+        logger.WriteTo.Console(outputTemplate: logTemplate);
+});
 
 app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =>
     ex != null || http.Response.StatusCode > 499 ? LogEventLevel.Error
