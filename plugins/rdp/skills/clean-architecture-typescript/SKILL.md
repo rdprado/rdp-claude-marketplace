@@ -675,6 +675,18 @@ export function assertNever(value: never): never {
 Who holds identity and the token (BFF inside the API or a separate BFF): load `rdp:bff` with the
 Skill tool and follow it.
 
+## No secrets in the browser
+
+Everything in client JS/TS is public: anyone reads the bundle in DevTools.
+
+- Variables with a public prefix (`PUBLIC_`, `VITE_`, `NEXT_PUBLIC_`, `EXPO_PUBLIC_`) go into the
+  bundle. Never put a secret in one.
+- Secrets live on the server only: in SvelteKit `$env/static/private` (or `$env/dynamic/private`),
+  used only in `hooks.server.ts`, `+server.ts`, `+page.server.ts` or `lib/server/`. The front calls
+  the BFF and the BFF adds the key.
+- In the front, only keys that are public by design and locked to the domain (e.g. a Maps key,
+  Stripe `pk_`). React Native has no server: any key in the app is public too.
+
 ## Dependency injection
 
 Two links, same as .NET:

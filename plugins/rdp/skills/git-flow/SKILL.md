@@ -52,6 +52,21 @@ Every branch name carries the GitHub issue number, e.g. `feature/1234-order-stat
 - There's no `gh` equivalent, and the claude.ai Atlassian connector has no Bitbucket tools. Prepare PRs with **`${CLAUDE_PLUGIN_ROOT}/templates/ci/open-pr.sh`** (in the `rdp` plugin): it fills the team template, copies the description to the clipboard and prints the "create PR" link — you create the PR in the browser. No token needed. Never put Bitbucket credentials inline or in a repo.
 - Put the issue number at the start of the PR title: `#1234: add order status webhook`.
 
+## Before committing: secrets check
+
+Before every commit, check the staged diff (`git diff --cached`):
+
+- Secrets: API keys, tokens, passwords, connection strings, private keys, `.env` or `*.pem` files.
+- Front-end code (`.ts`, `.js`, `.svelte`, `.tsx` that runs in the browser): any key-looking string,
+  and any `PUBLIC_` / `VITE_` / `NEXT_PUBLIC_` / `EXPO_PUBLIC_` variable named like a secret
+  (`SECRET`, `TOKEN`, `PASSWORD`, `KEY`).
+- Personal data in fixtures, seeds or logs (emails, CPF, phone numbers).
+- If `gitleaks` is installed, also run `gitleaks git --staged`.
+
+If anything turns up, stop, show it (never print the secret's value) and let the developer decide.
+After a front-end build, scan the client output (`build/`, `.svelte-kit/output/client`, `dist/`) the
+same way: it's exactly what the browser gets.
+
 ## Commits
 
 - Small commits, in order, one logical change each. Each says why, what changed, and how it was checked.
