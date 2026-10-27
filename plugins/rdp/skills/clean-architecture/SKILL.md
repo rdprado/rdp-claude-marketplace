@@ -323,7 +323,7 @@ the Skill tool and follow it.
 
 ## Avoid duplicated business rules
 
-Write each business rule once, in a rules class (Entities or Application, e.g. `BodyRecordRules.DateProblem`). Use cases and validators call it; never copy it. A client may repeat the check only to warn before sending, using the same test cases. Before writing an `if` for a rule, search whether it already exists.
+Write each business rule once, in a rules class (Entities or Application, e.g. `BodyRecordRules.DateProblem`). Use cases and validators call it; never copy it. A rule a client screen needs (what to flag, what is more urgent, thresholds) is computed here too and sent ready in the use case's `Output`; never leave it for the front to work out. A client may repeat the check only to warn before sending, using the same test cases. Before writing an `if` for a rule, search whether it already exists.
 
 ## Quality checks
 

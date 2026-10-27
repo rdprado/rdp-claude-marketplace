@@ -386,8 +386,9 @@ Every screen, in React, React Native and Svelte, has three parts:
 
 - **Model:** where the data comes from — the use case or gateway interface (`TraineesGateway`),
   entities, types.
-- **ViewModel:** one plain TS class per screen. It holds the screen state and decides what to show
-  (messages, `canSubmit`, sorting, field warnings). No React and no Svelte inside: no hooks, no runes.
+- **ViewModel:** one plain TS class per screen. It holds the screen state and decides how to show it
+  (messages, `canSubmit`, sorting, field warnings), never a business rule (see "No business logic in
+  the front"). No React and no Svelte inside: no hooks, no runes.
 - **View:** the `.tsx` / `.svelte` file. Humble: it reads the state and calls ViewModel methods. No
   `if` beyond show/hide, no formatting, no calls to clients.
 
@@ -559,6 +560,15 @@ async watch(symbol: string): Promise<void> {
   calls the gateway interface directly; a front use case would only pass the call through. Add a
   front use case only for real front-side work: several ports in one action, offline, local
   storage, throttling a stream.
+- **No business logic in the front.** When there is an API, a rule that could live there lives there
+  (domain + use case), and the API sends the result ready: what to flag, what matters more (urgency,
+  priority), thresholds ("missed more than a third"), which group or tile an item counts in. The
+  ViewModel only turns it into what the screen shows: texts, how many tags fit, what is open, and
+  sorting (by name, by date, by the API's urgency). Sorting is presentation; deciding that a pain is
+  more urgent than a missing plan is a business rule. A priority or threshold computed in a ViewModel
+  is in the wrong place, and every other client (the app, an assistant, a report) would have to copy
+  it. Example: the coach's home gets each trainee's alerts
+  from the API already ordered and grouped; the ViewModel draws them as tags.
 - **Zustand** only for state shared across screens (session, selected account). A screen's own
   state lives in its ViewModel.
 - Big pure pieces of a ViewModel (a mapping, a sort rule) can move to a plain function next to it.
@@ -742,7 +752,7 @@ export const useContainer = () => {
 
 - Don't import `react`, `expo-*`, `axios`, or `@microsoft/signalr` from `entities/` or `application/`. Define a port; implement it in `infrastructure/`.
 - Don't use `any`. Use `unknown` and narrow, or define a real type (see `.claude/rdp-standards.md`).
-- Don't put business rules in components, ViewModels, hooks, or Zustand stores. Those belong in use cases and entities (or the API). A ViewModel holds presentation decisions only.
+- Don't put business rules in components, ViewModels, hooks, or Zustand stores. Those belong in use cases and entities, and when there is an API, in the API (priorities, thresholds, what to flag). A ViewModel holds presentation decisions only (sorting included).
 - Don't put logic in a View (`.tsx` / `.svelte`). It binds to its ViewModel.
 - Don't use hooks or runes (`$state`, `$derived`) inside a ViewModel. It stays plain TS.
 - Don't keep ViewModel instances in the container or a module variable. The container holds factories; the screen creates its ViewModel and disposes it on unmount.
