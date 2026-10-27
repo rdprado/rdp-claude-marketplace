@@ -252,6 +252,10 @@ app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =
 
 - The file path is outside the app folder, so a deploy doesn't wipe it.
 - `UseSerilogRequestLogging` after the static files, so pages with a token in the URL aren't logged.
+- Action log: an `ActionLogMiddleware` records every write (`POST/PUT/PATCH/DELETE /api/*`) after
+  its response: who (email claim), the action (method + route template), the route ids, the status and
+  the request/response JSON, through a `RecordAction` use case that hides sensitive fields. Reads and
+  non-JSON bodies are skipped. A failure to record is logged and never fails the request.
 - Message templates: `LogInformation("Order {OrderId} sent", id)`, not interpolation.
 - Unexpected exceptions are logged once, by the global exception handler.
 - Tests: `NullLogger<T>.Instance`.
