@@ -9,6 +9,9 @@ The BFF holds identity and the token, so browser JavaScript never sees it (IETF
 
 - At sign-in the BFF talks to the identity provider and keeps the token in an HttpOnly + Secure +
   SameSite cookie. The front never calls the identity provider.
+- The cookie is encrypted (AES-256-GCM, key from a `SESSION_SECRET` env var; or an opaque session id
+  with the tokens kept on the server). Never the token in plain text or base64: DevTools would show it.
+  A tampered cookie counts as no session.
 - On each call the browser sends the cookie; the BFF reads the token from it.
 
 Two valid shapes:
@@ -44,7 +47,9 @@ The entry reads the request, calls one class, and writes the response. No `if` t
 ### Classes (no framework imports)
 
 - `SignIn` — exchanges the code with the identity provider, sets the session cookie.
-- `SessionRefresher` — renews the access token when it expires (refresh token rotates).
+- `SessionRefresher` — renews the access token when it expires (refresh token rotates). Requests that
+  arrive together share one renewal; the old cookie is accepted for a few seconds at most (concurrent
+  requests), never longer, or a stolen copy replayed in that window isn't caught as reuse.
 - `SignOut` — revokes the refresh token at the identity provider, clears the cookies.
 - `ApiProxy` — forwards `/api/*` to the API with `Authorization: Bearer`.
 

@@ -153,7 +153,10 @@ client translates:
 - HTTP status from `OutputStatus`: `Validation` 400, `NotFound` 404, `Conflict` 409.
 - The global exception handler returns 500 `{ "error": { "code": "unexpected" } }` and logs the full
   exception. Never `ex.Message` or the stack, in any environment.
-- One shape for every endpoint: no `{ message }`, `{ error: "..." }` or bare strings.
+- One shape for every endpoint: no `{ message }`, `{ error: "..." }` or bare strings. ASP.NET Core
+  writes some errors on its own, so cover them too: `InvalidModelStateResponseFactory` → `validation-failed`
+  (bad JSON, bad types); JwtBearer `OnChallenge` → `unauthorized`; `SuppressMapClientErrors = true` plus
+  status-code pages for 404/405/415 (`not-found`, `method-not-allowed`, `unsupported-media-type`).
 
 ```csharp
 // Api/Errors/ApiErrors.cs
@@ -178,10 +181,11 @@ public enum OutputStatus
     Success = 0,
     NotFound = 1,
     Validation = 2,
+    Conflict = 3,
 }
 ```
 
-Add new members only when a new failure shape genuinely needs distinct HTTP mapping (e.g. `Conflict = 3`, `Forbidden = 4`). Don't add per-feature statuses.
+Add new members only when a new failure shape genuinely needs distinct HTTP mapping (e.g. `Forbidden = 4`). Don't add per-feature statuses.
 
 `Application/UseCases/ValidationResult.cs`:
 
@@ -192,14 +196,19 @@ namespace Application.UseCases;
 
 public sealed record ValidationResult
 {
-    public static readonly ValidationResult Success = new(true, null);
+    public static readonly ValidationResult Success = new(true, null, null);
 
-    public static ValidationResult Fail(string errorCode) => new(false, errorCode);
+    public static ValidationResult Fail(string errorCode) => new(false, errorCode, null);
 
-    private ValidationResult(bool isValid, string? errorCode)
+    // Several fields wrong at once: one 400 carries a code per field.
+    public static ValidationResult Fail(string errorCode, IReadOnlyDictionary<string, string> fields)
+        => new(false, errorCode, fields);
+
+    private ValidationResult(bool isValid, string? errorCode, IReadOnlyDictionary<string, string>? fields)
     {
         IsValid = isValid;
         ErrorCode = errorCode;
+        Fields = fields;
     }
 
     // Tells the compiler ErrorCode is non-null whenever IsValid is false,
@@ -208,6 +217,8 @@ public sealed record ValidationResult
     public bool IsValid { get; }
 
     public string? ErrorCode { get; }
+
+    public IReadOnlyDictionary<string, string>? Fields { get; }
 }
 ```
 
@@ -292,7 +303,8 @@ app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =
 - Audit, in every API: an `ActionLogMiddleware` logs every write (`POST/PUT/PATCH/DELETE /api/*`) after its response
   to the `Audit` category (`loggerFactory.CreateLogger("Audit")`): the user id (`sub`, never the email),
   the action (method + route template), the route ids, the status and the request JSON with sensitive
-  fields hidden. Reads are skipped. A failure to log never fails the request.
+  fields hidden. Reads are skipped. The entry is written in a `finally`, so a write that fails (500) is
+  audited too. A failure to log never fails the request.
 - LGPD: no email, CPF, tokens or other personal data in either file; the user id (`sub`) is enough.
 - Message templates: `LogInformation("Order {OrderId} sent", id)`, not interpolation.
 - Unexpected exceptions are logged once, by the global exception handler.

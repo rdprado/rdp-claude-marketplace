@@ -693,7 +693,8 @@ Everything in client JS/TS is public: anyone reads the bundle in DevTools.
 
 - Variables with a public prefix (`PUBLIC_`, `VITE_`, `NEXT_PUBLIC_`, `EXPO_PUBLIC_`) go into the
   bundle. Never put a secret in one.
-- Secrets live on the server only: in SvelteKit `$env/static/private` (or `$env/dynamic/private`),
+- Secrets live on the server only: in SvelteKit 3 `$app/env/private` (Kit 2: `$env/static/private` or
+  `$env/dynamic/private`),
   used only in `hooks.server.ts`, `+server.ts`, `+page.server.ts` or `lib/server/`. The front calls
   the BFF and the BFF adds the key.
 - In the front, only keys that are public by design and locked to the domain (e.g. a Maps key,
