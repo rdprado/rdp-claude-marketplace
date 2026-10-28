@@ -92,7 +92,8 @@ Set up this project with the RDP AI standards.
      suggest an abbreviation (e.g. `market-place-experimentation-csharpapi` → `[MktPlaceExpApi]`).
 3. If the project has no `CLAUDE.md`: copy the base from step 2
    (`${CLAUDE_PLUGIN_ROOT}/templates/claude-md/legacy.md` or `modern/base.md`) to the
-   project root as `CLAUDE.md`, filling in the GitHub repo and the tag. Then apply the stack
+   project root as `CLAUDE.md` without the template's opening `<!-- Template for ... -->` comment
+   (it is for whoever edits the template), filling in the GitHub repo and the tag. Then apply the stack
    file, if there is one:
    - `Stack:` line → the file's first line (ask for `<version>`, suggest the latest LTS).
    - `<App>` in the Layout → the app name, in PascalCase (ask; suggest it from the folder
