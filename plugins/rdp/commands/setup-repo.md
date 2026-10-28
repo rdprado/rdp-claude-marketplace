@@ -88,7 +88,8 @@ Set up this project with the RDP AI standards.
      is not installed or not logged in, ask me for it.
    - Tag (e.g. `[WebBroker]`): the prefix of every issue title in that GitHub
      repo. Suggest it from the folder name, in the same form as the repo's
-     name.
+     name. Keep it short: if the name is longer than about 15 letters,
+     suggest an abbreviation (e.g. `market-place-experimentation-csharpapi` → `[MktPlaceExpApi]`).
 3. If the project has no `CLAUDE.md`: copy the base from step 2
    (`${CLAUDE_PLUGIN_ROOT}/templates/claude-md/legacy.md` or `modern/base.md`) to the
    project root as `CLAUDE.md`, filling in the GitHub repo and the tag. Then apply the stack
