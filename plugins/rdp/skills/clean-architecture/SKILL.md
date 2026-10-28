@@ -284,7 +284,7 @@ builder.Services.AddSerilog((services, logger) =>
                 retainedFileCountLimit: logs.RetainedDays, outputTemplate: logTemplate));
     if (builder.Environment.IsDevelopment())
         logger.WriteTo.Console(outputTemplate: logTemplate);
-});
+}, preserveStaticLogger: true); // each host keeps its own logger: parallel test hosts don't share log files
 
 app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =>
     ex != null || http.Response.StatusCode > 499 ? LogEventLevel.Error
