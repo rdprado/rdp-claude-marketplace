@@ -14,7 +14,7 @@ Topic rules are skills in the `rdp` plugin. Before starting a task listed below,
 |---|---|---|
 | Writing, reviewing or fixing code | `clean-architecture` | `clean-architecture-typescript` |
 | Adding or changing tests | `testing` | `testing-typescript` |
-| Adding or changing configuration keys / environments | `configuration` | — |
+| Adding or changing configuration keys / environments | `configuration` | `configuration` (BFF) |
 | Adding a SignalR hub or touching hub code | `signalr` | — |
 | Touching sign-in, tokens, cookies, identity provider calls or a BFF | `bff` | `bff` |
 | Running `ci/verify.sh`, reading a Sonar quality gate or issues, or touching Sonar config | `sonar` | `sonar` |
