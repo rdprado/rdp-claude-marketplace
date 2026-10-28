@@ -17,13 +17,16 @@ What to read for:
 - Whether obvious edge cases are missing.
 - Whether mocks reflect production behavior, not what makes the test green.
 
-## TDD
+## Test quality
 
-- Write the failing test before you change the code, and see it fail for the reason you expect.
-- Make the smallest change that makes it pass.
+How a change is built (understand, design, implement, test, check the tests, review) is in the standards'
+*Working method*. Every test must:
+
+- Test behavior, not implementation: call the code the way its user does and check what that user would see.
+- Have expected values that don't come from the code under test.
+- Cover the boundaries (empty, limit, one past the limit).
+- Fail when a defect is introduced on purpose; a test that still passes when every function returns nothing goes.
 - If an honest test is impractical, don't write a bad one; say so.
-- Test behavior, not implementation: the test calls the code the way its user does and checks the result that user would see.
-- If a test would still pass when every function returned nothing, throw it out.
 
 ## Stack
 

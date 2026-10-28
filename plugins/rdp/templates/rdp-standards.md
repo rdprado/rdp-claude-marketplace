@@ -39,6 +39,18 @@ Topic rules are skills in the `rdp` plugin. Before starting a task listed below,
 
 ## Working method
 
+Build a change in this order:
+
+1. **Understand** the requirements: business rules, edge cases, invariants, failure conditions.
+2. **Design** before coding: the main components, interfaces, data structures and who is responsible for what.
+3. **Implement** in sensible increments. A test-first cycle for every small change is not required.
+4. **Run the automated tests**: unit, integration and end-to-end where they fit.
+5. **Check the tests' quality**: expected values that don't come from the code under test, boundaries
+   covered, and a defect introduced on purpose makes them fail.
+6. **Review**: maintainability, error handling, security, and whether it really meets the requirements.
+
+- When the environment fails (a package feed returns 403, a tool or an access is missing), stop and
+  ask. Don't work around it with a new config file or another source.
 - Fix root causes: reproduce the problem, then fix the cause. A guard that only hides the error is not a fix.
 - If two fixes built on the same premise fail, stop. Write the premise in one sentence and question it before trying again.
 - Refactoring: pin the behavior with tests, change the structure, prove the behavior did not change.

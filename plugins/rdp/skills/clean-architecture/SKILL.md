@@ -230,6 +230,9 @@ public class EFGoalRepository(AppDbContext ctx) : IGoalRepository
 
 EF mapping (tables, keys, indexes) lives in `Infrastructure/.../Configurations/` via `IEntityTypeConfiguration<T>` — not as attributes on entities.
 
+Local development with no real database yet: SQLite in-memory, the same provider as the integration
+tests (one `SqliteConnection("DataSource=:memory:")` kept open). No database file, no EF InMemory provider.
+
 ## DI: one extension method per project
 
 Each project exposes a `DependencyInjection.cs` with a single `AddXxx()` extension named after the project. Infrastructure splits into multiple projects (one per concern), so it contributes multiple calls — not a single `AddInfrastructure(...)`. The composition root calls each:
@@ -286,7 +289,7 @@ app.UseSerilogRequestLogging(options => options.GetLevel = (http, elapsed, ex) =
 - Paths outside the app folder, so a deploy doesn't wipe them. Serilog deletes files beyond
   `RetainedDays` when it rolls (it counts files: one per day).
 - `UseSerilogRequestLogging` after the static files, so pages with a token in the URL aren't logged.
-- Audit: an `ActionLogMiddleware` logs every write (`POST/PUT/PATCH/DELETE /api/*`) after its response
+- Audit, in every API: an `ActionLogMiddleware` logs every write (`POST/PUT/PATCH/DELETE /api/*`) after its response
   to the `Audit` category (`loggerFactory.CreateLogger("Audit")`): the user id (`sub`, never the email),
   the action (method + route template), the route ids, the status and the request JSON with sensitive
   fields hidden. Reads are skipped. A failure to log never fails the request.
