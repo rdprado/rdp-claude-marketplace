@@ -57,7 +57,7 @@ Innermost to outermost. **Dependencies point inward.** Inner layers never import
 5. **Composition root** — wires concrete implementations to ports and provides them to the interface-adapters layer (see "Dependency injection" below).
 
 **Thin front** (the business rules are in the API, e.g. a Svelte app behind a BFF): Entities and use
-cases may be empty. Application then holds only the ports, their read models and `common/`, and the
+cases may be empty. Application then holds only the ports, their read models and `Result`, and the
 ViewModel calls the port directly. Add an entity or a use case only when real front rules show up.
 
 **Names:** the port says what it provides, never the technology (`TraineesGateway`, `SecureStorage`,
@@ -84,7 +84,7 @@ What each layer holds, and what gets a unit test:
 | .NET (the `clean-architecture` skill) | TypeScript / React |
 |---|---|
 | Entities | `entities/` — classes or types + pure functions |
-| Application (use cases, I/O, interfaces, validators) | `application/use-cases/`, `application/ports/`, colocated validators, `application/common/` |
+| Application (use cases, I/O, interfaces, validators) | `application/use-cases/`, `application/ports/`, colocated validators |
 | Infrastructure (EF, clients) | `infrastructure/` — SDK wrappers; data-access under `infrastructure/data/` |
 | Entry / Presentation (controllers) | `interface-adapters/` — screens, components, hooks, stores + entry (`app/` routes) |
 | `OutputStatus` / `ValidationResult` | `Result<T>` discriminated union / `ValidationResult` |
@@ -115,12 +115,11 @@ src/
 ├── entities/                       # Order, Strategy — enterprise rules & invariants
 │   └── Strategy.ts
 ├── application/                    # application business rules (sibling of entities)
-│   ├── use-cases/
+│   ├── use-cases/                  # + Result.ts, ValidationResult.ts, assertNever.ts (shared by all)
 │   │   └── createTwapStrategy/
 │   │       ├── createTwapStrategy.ts            # Input, Output, interface, use case class
 │   │       └── createTwapStrategy.validator.ts  # validator (colocated)
-│   ├── ports/                      # StrategyRepository, Clock, SecureStorage (interfaces)
-│   └── common/                     # Result, OutputStatus, ValidationResult
+│   └── ports/                      # StrategyRepository, Clock, SecureStorage (interfaces)
 ├── infrastructure/                 # implementations of application ports
 │   ├── data/                       # data-access adapters
 │   │   ├── signalr/                # implements MarketDataRepository
@@ -128,7 +127,7 @@ src/
 │   │   └── secureStore/            # implements SecureStorage (expo-secure-store)
 │   └── monitoring/                 # Sentry, Firebase, LaunchDarkly — non-data infra
 ├── interface-adapters/             # presentation (MVVM) + entry
-│   ├── common/                     # ViewModel<S> base class, useViewModel (React)
+│   ├── view-models/                # ViewModel<S> base class, useViewModel (React)
 │   ├── screens/
 │   │   └── trainees/
 │   │       ├── TraineesViewModel.ts       # state + decisions, plain TS
@@ -196,7 +195,7 @@ the constructor, and `execute(input)` runs it. Callers depend on the interface o
 
 ```ts
 // application/use-cases/listUserCustomColors/listUserCustomColors.ts
-import { Result } from '@application/common/Result';
+import { Result } from '@application/use-cases/Result';
 import { UserCustomDefinitionRepository } from '@application/ports/UserCustomDefinitionRepository';
 import { ListUserCustomColorsValidator } from './listUserCustomColors.validator';
 
@@ -244,7 +243,7 @@ export class ListUserCustomColors implements ListUserCustomColorsUseCase {
 
 ```ts
 // application/use-cases/listUserCustomColors/listUserCustomColors.validator.ts
-import { ValidationResult } from '@application/common/ValidationResult';
+import { ValidationResult } from '@application/use-cases/ValidationResult';
 import { ListUserCustomColorsInput } from './listUserCustomColors';
 
 export const ListUserCustomColorsValidator = {
@@ -280,7 +279,7 @@ Use cases don't throw for expected failure paths (validation, not-found, conflic
 Exceptions are reserved for unexpected failures (network down, SDK 500). In a use case, let them propagate. A ViewModel catches them at the screen (see "Errors → feedback").
 
 ```ts
-// application/common/Result.ts
+// application/use-cases/Result.ts
 export type OutputStatus = 'success' | 'notFound' | 'validation' | 'conflict';
 
 export type FieldErrors = Readonly<Record<string, string>>;
@@ -312,7 +311,7 @@ The discriminated union is deliberate: `switch (result.status)` is exhaustively 
 Keep these identical across all TS projects so use cases, screens, and tests look the same everywhere — the TS mirror of the .NET `OutputStatus` / `ValidationResult`.
 
 ```ts
-// application/common/ValidationResult.ts
+// application/use-cases/ValidationResult.ts
 export type ValidationResult =
   | { readonly isValid: true }
   | { readonly isValid: false; readonly errorMessage: string };
@@ -416,7 +415,7 @@ and returns an unsubscribe) and React's `useSyncExternalStore` (`subscribe` + a 
 `state` is the same reference until `set()`).
 
 ```ts
-// interface-adapters/common/ViewModel.ts
+// interface-adapters/view-models/ViewModel.ts
 export abstract class ViewModel<S> {
   private readonly listeners = new Set<(state: S) => void>();
   private readonly cleanups: (() => void)[] = [];
@@ -509,7 +508,7 @@ re-renders. When the component is destroyed, Svelte calls the unsubscribe it got
 React reads it with one generic hook:
 
 ```tsx
-// interface-adapters/common/useViewModel.ts
+// interface-adapters/view-models/useViewModel.ts
 export function useViewModel<S>(vm: ViewModel<S>): S {
   return useSyncExternalStore(vm.subscribe, vm.getSnapshot);
 }
@@ -667,7 +666,7 @@ async submit(): Promise<void> {
 ```
 
 ```ts
-// application/common/assertNever.ts
+// application/use-cases/assertNever.ts
 export function assertNever(value: never): never {
   throw new Error(`Unhandled case: ${JSON.stringify(value)}`);
 }
@@ -760,7 +759,8 @@ export const useContainer = () => {
 - Don't throw from use cases for expected failures (validation, not-found). Return a `Result`.
 - Don't call `new Date()`, `Date.now()`, or `Math.random()` inside entities or application code. Inject a `Clock` / RNG port — otherwise it isn't testable.
 - Don't reach into a third-party SDK from more than one place. Wrap it once behind a port.
-- Don't create a `utils/` or `common/` dumping ground for misfit code. If a helper reasons about an entity's invariants, put it on the entity. If it touches IO/framework/serialization/time, define a port and implement it in `infrastructure/`. "I need a place for this helper" is a smell — find its real home.
+- Don't create a `common/`, `shared/`, `utils/` or `helpers/` folder. A folder says what it holds
+  (`use-cases/`, `ports/`, `view-models/`). If a helper reasons about an entity's invariants, put it on the entity. If it touches IO/framework/serialization/time, define a port and implement it in `infrastructure/`. "I need a place for this helper" is a smell — find its real home.
 - Don't return raw API DTOs to components. Map them in `infrastructure/data/` to an entity or a read model; the ViewModel turns it into what the screen shows.
 - Don't decide in the View: no expression beyond binding a value the ViewModel already computed.
 - Don't add a DI container library. The composition root + Context is enough.

@@ -147,7 +147,7 @@ client translates:
 { "error": { "code": "goal-name-required", "fields": { "name": "required" } } }
 ```
 
-- Codes are constants in `Application/Common/ErrorCodes.cs` (`GoalNotFound = "goal-not-found"`).
+- Codes are constants in `Application/Errors/ErrorCodes.cs` (`GoalNotFound = "goal-not-found"`).
   The `Output` and `ValidationResult` carry the code, never text for the user.
 - `fields` only on validation, when a field is to blame.
 - HTTP status from `OutputStatus`: `Validation` 400, `NotFound` 404, `Conflict` 409.
@@ -156,7 +156,7 @@ client translates:
 - One shape for every endpoint: no `{ message }`, `{ error: "..." }` or bare strings.
 
 ```csharp
-// Api/Common/ApiErrors.cs
+// Api/Errors/ApiErrors.cs
 public static class ApiErrors
 {
     public static IActionResult Of(int status, string code, IReadOnlyDictionary<string, string>? fields = null)
@@ -168,10 +168,10 @@ public static class ApiErrors
 
 Two primitives appear in every project — keep them identical so use cases, controllers, and tests look the same everywhere.
 
-`Application/Common/OutputStatus.cs`:
+`Application/UseCases/OutputStatus.cs`:
 
 ```csharp
-namespace Application.Common;
+namespace Application.UseCases;
 
 public enum OutputStatus
 {
@@ -183,12 +183,12 @@ public enum OutputStatus
 
 Add new members only when a new failure shape genuinely needs distinct HTTP mapping (e.g. `Conflict = 3`, `Forbidden = 4`). Don't add per-feature statuses.
 
-`Application/Common/Validation/ValidationResult.cs`:
+`Application/UseCases/ValidationResult.cs`:
 
 ```csharp
 using System.Diagnostics.CodeAnalysis;
 
-namespace Application.Common.Validation;
+namespace Application.UseCases;
 
 public sealed record ValidationResult
 {
@@ -254,7 +254,7 @@ Serilog (`Serilog.AspNetCore`, `Serilog.Sinks.File`), wired only in `Program.cs`
 ```csharp
 const string logTemplate =
     "[{Timestamp:HH:mm:ss} {Level:u3}] [{RequestId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
-var logs = builder.Configuration.GetSection("Logs").Get<LogsOptions>()
+var logs = builder.Configuration.GetSection("Logs").Get<LogsOptions>() // Api/Logging/LogsOptions.cs
     ?? throw new InvalidOperationException("Logs is missing in appsettings.");
 builder.Services.AddSerilog((services, logger) =>
 {
@@ -316,7 +316,8 @@ the Skill tool and follow it.
 - Don't declare entities as `record`. Entities have identity and mutable state; value-equality is wrong for them. Use `class`.
 - Don't return entities from controllers. Map to a response record.
 - Don't reference `Infrastructure` from `Application`. Define an interface in Application; implement it in Infrastructure.
-- Don't make a `Shared` or `Common` project for misfit code. If it doesn't fit a layer, the design is wrong.
+- Don't create a `Common`, `Shared`, `Utils` or `Helpers` project or folder. A folder says what it holds
+  (`UseCases`, `Errors`, `Logging`); if something has no such home, the design is wrong.
 - Don't dump helper classes, utility methods, or "service" types into Application. Application holds use cases, their I/O, interfaces, validators, and the shared primitives — nothing else. If a helper reasons about an entity's invariants or business rules, put it on the entity (or a domain service next to entities). If it touches IO, framework, parsing, serialization, time, or any external concern, define an interface in Application and implement it in Infrastructure. "I need a place for this helper" is a smell — find its real home.
 - Don't throw from use cases for expected failure paths. Return an `Output` with the right `OutputStatus`.
 - Don't use Minimal API endpoints — controllers test better.
