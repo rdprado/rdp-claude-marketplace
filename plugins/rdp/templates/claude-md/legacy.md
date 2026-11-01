@@ -9,7 +9,7 @@
      with no git/CI) or write "N/A" in its line. -->
 
 <!-- RDP block — written by /rdp:setup-repo, refreshed by the RDP commands. -->
-Before writing, reviewing, testing or designing code, load the `rdp-mode` skill and the RDP skills its table lists for the task. Skip its clean architecture rules. Tests are not required; any test you add follows the `testing` skill.
+Before writing, reviewing, testing or designing code, load the `rdp-mode` skill and the RDP skills its table lists for the task. Skip its clean architecture rules. Tests are not required; any test you add follows `rdp-mode` → "Tests".
 <!-- end RDP block -->
 
 ## Project profile

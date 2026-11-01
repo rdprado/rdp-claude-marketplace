@@ -64,10 +64,12 @@ test('hooks.server.ts needs both rdp-mode and bff', () => {
   assert.doesNotMatch(denied(dir, session, 'Write', { file_path: `${dir}/web/src/hooks.server.ts` }), /rdp-mode/);
 });
 
-test('test files also need the testing skill', () => {
+test('test files need only rdp-mode (its Tests section)', () => {
   const dir = project(RDP_CLAUDE_MD);
-  assert.match(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/tests/App.Tests.Unit/OrderTests.cs` }), /rdp:testing/);
-  assert.match(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/web/src/x.test.ts` }), /rdp:testing-typescript/);
+  const session = randomUUID();
+  runHook(dir, session, 'Skill', { skill: 'rdp:rdp-mode' });
+  assert.equal(denied(dir, session, 'Write', { file_path: `${dir}/tests/App.Tests.Unit/OrderTests.cs` }), null);
+  assert.equal(denied(dir, session, 'Write', { file_path: `${dir}/web/src/x.test.ts` }), null);
 });
 
 test('hubs, appsettings and pipelines need their skills', () => {
@@ -104,7 +106,6 @@ test('markdown and other files pass', () => {
 test('legacy projects need rdp-mode too', () => {
   const dir = project(LEGACY_CLAUDE_MD);
   assert.match(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/src/Form1.cs` }), /rdp:rdp-mode/);
-  assert.match(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/Tests/Form1Tests.cs` }), /rdp:testing/);
 });
 
 test('loading is per session', () => {

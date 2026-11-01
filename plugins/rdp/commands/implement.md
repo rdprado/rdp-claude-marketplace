@@ -59,8 +59,7 @@ on the lines below it.
    and the IDE to open (Visual Studio with the `.sln` for C# repos, VS Code otherwise).
 3. Implement each story.
    - Read the guidelines first: the story's own, plus `rdp-mode` and the skills from its table
-     that match the work (`testing` for any test, `git-flow` before
-     any branch/commit/push).
+     that match the work (`git-flow` before any branch/commit/push).
    - Before coding, if the story leaves something open that blocks the work, ask me **one
      question at a time**, saying in one line what each answer changes; what I can't answer
      goes into the plan as a risk with an owner. If docs and code disagree, flag it instead of

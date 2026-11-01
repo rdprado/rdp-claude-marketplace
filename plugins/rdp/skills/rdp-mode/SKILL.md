@@ -19,7 +19,6 @@ If the project's `CLAUDE.md` says otherwise, the project wins. Before a task, lo
 
 | Task                                                   | .NET              | TypeScript / React (Native)     |
 | ------------------------------------------------------ | ----------------- | ------------------------------- |
-| Tests                                                  | `testing`         | `testing-typescript`            |
 | `appsettings*.json` keys or environments               | `configuration`   | `configuration`                 |
 | SignalR hubs                                           | `signalr`         | —                               |
 | Sign-in, tokens, cookies, identity provider calls, BFF | `bff`             | `bff`                           |
@@ -161,10 +160,16 @@ hold rules written nowhere else, so treat the code as part of these rules.
 * Finish one small unit and check it.
 * Then start the next.
 
-## Test Behavior, Not Implementation
+## Tests
 
-* The test calls the code the way its user does and checks the result that user would see.
-* If the test would still pass when every function returned nothing, throw it out.
+* Ask developer to review your tests. Fake only boundaries, never the unit under test.
+* `// Arrange // Act // Assert` in every test. Make the SUT clear.
+* No skipped "broken" tests, never catch an error to go green.
+* Unit tests: fast (no sleeps, preferably no loops; fake threads and timers); no real I/O; never unit-test a class that touches UI, database, HTTP or files (it sits behind an interface; test the logic around it).
+* Integration tests: no real database server, network or external service; Docker if needed; parallel with no shared state. In C#: `WebApplicationFactory`, SQLite in-memory (not EF InMemory) reset per test.
+* If TypeScript: Vitest (Svelte) or Jest (React Native), `it.each`; `describe` = the unit, `it` = the scenario; fake clock and timers; no faker; fakes implement the port (no `any`, no casts). ViewModels are the main target: `new` with fake ports, check `vm.state`, `dispose()` stops what it started; views have no test.
+* If C#: xUnit + Moq + `Assert.*`, `FakeTimeProvider`; no FluentAssertions, Shouldly, NSubstitute, Bogus or AutoFixture. `Tests.Unit` and `Tests.Integration`; `Method_Scenario_Expected`, `[Theory]`.
+* For reference, see the orders example's tests.
 
 ## Code style
 

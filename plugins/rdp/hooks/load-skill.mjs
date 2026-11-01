@@ -40,16 +40,12 @@ function skillsForFile(path) {
   const normalized = path.replaceAll('\\', '/');
   const name = basename(normalized);
   const ext = extname(normalized).toLowerCase();
-  // x.test.ts, x.spec.ts, a tests/ folder, App.Tests.Unit/, OrderTests.cs
-  const isTest = /\.test\.|\.spec\.|(^|[/.])tests?([/.]|$)|Tests?\.cs$/i.test(normalized);
   const skills = [];
   if (ext === '.cs' || TS_EXTENSIONS.includes(ext)) skills.push('rdp:rdp-mode');
   if (ext === '.cs') {
-    if (isTest) skills.push('rdp:testing');
     if (/Hub\.cs$/.test(name)) skills.push('rdp:signalr');
   }
   if (TS_EXTENSIONS.includes(ext)) {
-    if (isTest) skills.push('rdp:testing-typescript');
     if (name.startsWith('hooks.server.') || normalized.includes('/lib/server/')) skills.push('rdp:bff');
   }
   if (/^appsettings.*\.json$/i.test(name)) skills.push('rdp:configuration');

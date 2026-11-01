@@ -93,7 +93,7 @@ Excluded paths (C#-focused project — these add noise):
 
 ## Integration tests
 
-Separate step, reuses the build artifact, runs `ci/verify.sh integration`. Integration tests use `WebApplicationFactory` + test doubles for external services + a **SQLite in-memory** database — no EF InMemory provider, no live DB, no Docker. The pipeline needs no database service. If a test needs Docker/Testcontainers for a non-database dependency, it was approved per the `testing` skill first; add the runner support in the same PR.
+Separate step, reuses the build artifact, runs `ci/verify.sh integration`. Integration tests use `WebApplicationFactory` + test doubles for external services + a **SQLite in-memory** database — no EF InMemory provider, no live DB, no Docker. The pipeline needs no database service. If a test needs Docker/Testcontainers for a non-database dependency, it was approved first (`rdp-mode` → "Tests"); add the runner support in the same PR.
 
 ## Publish
 

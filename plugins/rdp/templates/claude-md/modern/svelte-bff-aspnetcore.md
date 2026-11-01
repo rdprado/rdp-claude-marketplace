@@ -8,7 +8,7 @@ Stack: TypeScript + SvelteKit (front + BFF) and .NET <version> + ASP.NET Core We
 - `api/`: the back end, per `rdp-mode` — all business rules live here. It trusts the
   Bearer token the BFF forwards.
 - The W3C `traceparent` goes from the BFF to the API, so one request can be followed end to end.
-- Tests: Vitest in `web/` (`testing-typescript`), xUnit in `api/` (`testing`).
+- Tests: Vitest in `web/`, xUnit in `api/`.
 
 ## Layout
 
