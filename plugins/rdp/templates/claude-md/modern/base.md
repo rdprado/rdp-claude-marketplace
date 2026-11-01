@@ -10,9 +10,7 @@
      with no git/CI) or write "N/A" in its line. -->
 
 <!-- RDP block — written by /rdp:setup-repo, refreshed by the RDP commands. -->
-@.claude/rdp-standards.md
-
-Rules that apply: all RDP skills, including clean architecture. Tests are required.
+Before writing, reviewing, testing or designing code, load the `rdp-mode` skill and the RDP skills its table lists for the task. Clean architecture applies. Tests are required.
 <!-- end RDP block -->
 
 ## Project profile
@@ -25,24 +23,18 @@ Rules that apply: all RDP skills, including clean architecture. Tests are requir
 - GitHub repo: `<owner/repo>` — tag `[<Project>]` (every issue title starts with it); labels and milestones are read from GitHub.
 - Docs: <path to this project's intro in docs/>
 
-## Sonar
+## Sonar (.NET)
 
-Generic rules and how to read results: the `sonar` skill. Values here must match `ci/verify.sh` and the pipeline.
+How to run it and set it up: the `sonar` skill.
 
-- Official project key: `<sonar-project-key>` (CI analyzes this; local runs use `<key>-local-<dev>` automatically — see the `sonar` skill)
-- Base branch for the local issue classification: `<main | release/X.Y.x>` (`BASE_BRANCH` in `ci/verify.sh`)
-- Coverage report: `<path/glob, e.g. **/coverage.opencover.xml>` (`<opencover | lcov>`) — same as the pipeline.
-- Scanner working dir (gitignored): `<.sonarqube/ | .scannerwork/>`
-- Current pass bar (<date checked>): `<e.g. new_violations must be 0>`
-- Known pre-existing debt (reported, not blocking unless we're paying it down): `<e.g. new_coverage 41.2% vs 80% required; new_duplicated_lines_density 6.1% vs 3%>`
-- Pipeline gate requires: `<the full gate conditions, for comparison>`
+- Official project key: `<sonar-project-key | none (an experiment that will never ship)>`
+- Base branch for "new from this work": `<main | release/X.Y.x>`
 
-## Build, test, verify
+## Build and test
 
 ```
 <build command>
 <unit test command>
-ci/verify.sh        # all gates, same script CI runs
 ```
 
 <!-- /init: stack details, solution layout, conventions and navigation go below. -->

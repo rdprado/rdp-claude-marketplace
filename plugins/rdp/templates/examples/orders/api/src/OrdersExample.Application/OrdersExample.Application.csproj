@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OrdersExample.Entities\OrdersExample.Entities.csproj" />
+    <!-- A utility (interface and implementation together), the one exception to "Application depends only on Entities". -->
+    <ProjectReference Include="..\OrdersExample.Infrastructure.Ids\OrdersExample.Infrastructure.Ids.csproj" />
+  </ItemGroup>
+
+</Project>

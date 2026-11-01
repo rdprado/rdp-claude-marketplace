@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OrdersExample.Entities/OrdersExample.Entities.csproj" />
+    <Project Path="src/OrdersExample.Infrastructure.Ids/OrdersExample.Infrastructure.Ids.csproj" />
+    <Project Path="src/OrdersExample.Application/OrdersExample.Application.csproj" />
+    <Project Path="src/OrdersExample.Infrastructure.OrdersRepository/OrdersExample.Infrastructure.OrdersRepository.csproj" />
+    <Project Path="src/OrdersExample.DevIdentityProvider/OrdersExample.DevIdentityProvider.csproj" />
+    <Project Path="src/OrdersExample.Api/OrdersExample.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OrdersExample.Tests.Unit/OrdersExample.Tests.Unit.csproj" />
+    <Project Path="tests/OrdersExample.Tests.Integration/OrdersExample.Tests.Integration.csproj" />
+  </Folder>
+</Solution>

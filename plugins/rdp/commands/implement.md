@@ -29,11 +29,10 @@ on the lines below it.
    config/docs-only stories say so and suggest skipping. Then stop and wait for my "go".
    Do nothing — no GitHub issue change, no git command — before that.
 0.5. Check the RDP standards, once: if the project's `CLAUDE.md` has no RDP
-   block, suggest `/rdp:setup-repo` and go on. Otherwise compare
-   `.claude/rdp-standards.md` and the RDP block with
-   `${CLAUDE_PLUGIN_ROOT}/templates/`; if they differ, say "The RDP standards
-   in this project are out of date", list the changes in a few lines and
-   offer to update them (then they must be committed). If they match, say
+   block, suggest `/rdp:setup-repo` and go on. Otherwise compare the RDP block with
+   `${CLAUDE_PLUGIN_ROOT}/templates/claude-md/`; if it differs or the project still has an old
+   `.claude/rdp-standards.md`, say "The RDP block in this project is out of date", list the
+   changes in a few lines and offer to update it (then it must be committed). If they match, say
    nothing.
 1. Read each story from GitHub with `gh issue view` (never from local files) and mark it
    in progress with the repo's in-progress label (from `gh label list`; ask if none fits). If
@@ -59,8 +58,8 @@ on the lines below it.
    Tell me in two lines where to follow the work: the absolute path of each clone/worktree
    and the IDE to open (Visual Studio with the `.sln` for C# repos, VS Code otherwise).
 3. Implement each story.
-   - Read the guidelines first: the story's own, plus the skills from the table in
-     `.claude/rdp-standards.md` that match the work (`testing` for any test, `git-flow` before
+   - Read the guidelines first: the story's own, plus `rdp-mode` and the skills from its table
+     that match the work (`testing` for any test, `git-flow` before
      any branch/commit/push).
    - Before coding, if the story leaves something open that blocks the work, ask me **one
      question at a time**, saying in one line what each answer changes; what I can't answer

@@ -18,13 +18,13 @@ implementation.
    first time using /rdp:story. If yes, explain in more detail — what you'll
    ask, what a good story needs, and what I can say ("that's out of scope",
    "split it", "approve") — before starting.
-0.5. Check the RDP standards, once, before the idea talk:
+0.5. Check the RDP block, once, before the idea talk:
    - If the project's `CLAUDE.md` has no RDP block, suggest `/rdp:setup-repo`
      and go on.
-   - Otherwise compare `.claude/rdp-standards.md` and the RDP block with
-     `${CLAUDE_PLUGIN_ROOT}/templates/`. If they differ, say "The RDP
-     standards in this project are out of date", list the changes in a few
-     lines and offer to update them (then they must be committed).
+   - Otherwise compare the RDP block with `${CLAUDE_PLUGIN_ROOT}/templates/claude-md/`.
+     If it differs or the project still has an old `.claude/rdp-standards.md`, say
+     "The RDP block in this project is out of date", list the changes in a few
+     lines and offer to update it (then it must be committed).
    - This command needs the "GitHub repo" line and the project tag; if
      either is missing, ask me for it and offer to add it.
    If everything is in order, say nothing and move on.

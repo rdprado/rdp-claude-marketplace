@@ -3,12 +3,12 @@
   "owner": {
     "name": "rdprado"
   },
-  "description": "Personal marketplace: the pnt plugin (AI standards, commands, agents, skills) and the pnt-mod band.",
+  "description": "Personal marketplace: the rdp plugin (AI standards, commands, agents, skills) and the rdp-mod band.",
   "plugins": [
     {
       "name": "rdp",
       "source": "./plugins/rdp",
-      "description": "RDP AI standards: /rdp:setup-repo and every RDP command keep each project's CLAUDE.md and .claude/rdp-standards.md current; the standards load as skills.",
+      "description": "RDP AI standards: the rdp-mode skill (main rules) and the on-demand skills; /rdp:setup-repo and every RDP command keep each project's CLAUDE.md current.",
       "category": "standards",
       "keywords": [
         "dotnet",
@@ -22,8 +22,8 @@
       ]
     },
     {
-      "name": "pnt-mod",
-      "source": "./plugins/pnt-mod",
+      "name": "rdp-mod",
+      "source": "./plugins/rdp-mod",
       "description": "Shows the context size, colored by fill, and the tokens the last prompt spent per agent, above the prompt.",
       "category": "productivity",
       "keywords": [

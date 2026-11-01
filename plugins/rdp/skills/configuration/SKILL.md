@@ -29,4 +29,5 @@ the file and the overrides and checks every key at startup.
 - Secrets are `""` in HML/PRD. The local file may hold a visibly fake value (e.g. `Session.Secret`
   `"local-dev-only-change-me-not-a-real-secret-0000"`) so the app runs with no setup; outside local the
   BFF refuses to start when a secret is empty or equals that value.
-- Nothing from these files reaches the browser bundle.
+- Nothing from these files reaches the browser bundle: client code is public. No secret in a
+  `PUBLIC_`/`VITE_` variable.

@@ -2,7 +2,7 @@ Stack: TypeScript + SvelteKit (front + separate BFF)
 
 ## Template: Svelte + BFF
 
-- Front: MVVM per the `clean-architecture-typescript` skill — a `ViewModel<S>` per screen, humble
+- Front: MVVM as in the orders example's `web/` — a `ViewModel<S>` per screen, humble
   `.svelte` views, factories in the composition root, `dispose()` on unmount.
 - BFF: the SvelteKit server, per the `bff` skill — it holds the token in an HttpOnly cookie and
   proxies `/api/*` to the API. No business logic in it. The browser never sees a token.
@@ -11,7 +11,7 @@ Stack: TypeScript + SvelteKit (front + separate BFF)
 ## Layout
 
 ```
-src/entities/  src/application/  src/infrastructure/   front, per clean-architecture-typescript
+src/application/  src/infrastructure/                 front: ports, Result; gateways, clock, i18n
 src/interface-adapters/screens/<feature>/              XViewModel.ts, XScreen.svelte, tests
 src/composition/                                       container + context (front)
 src/routes/                                            +page.svelte only renders a screen

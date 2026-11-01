@@ -477,7 +477,7 @@ require_sonar_config() {
     echo "verify: set the missing pipeline variables / runner tools (pipelines.md -> Secrets)." >&2
   else
     cat >&2 <<'SETUP'
-Set up local Sonar once (full steps: pnt-claude-marketplace README -> "Local Sonar setup", and the sonar skill):
+Set up local Sonar once (full steps: the rdp:sonar skill):
   1. Install Java 17+, jq, and the scanner: dotnet tool install --global dotnet-sonarscanner
   2. Create a personal token on the Sonar server: My Account -> Security -> Generate Token
   3. Set user environment variables SONAR_HOST_URL and SONAR_TOKEN (never commit them)

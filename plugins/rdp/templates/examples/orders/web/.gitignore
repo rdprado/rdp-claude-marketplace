@@ -1,0 +1,8 @@
+﻿node_modules
+/build
+/.svelte-kit
+/coverage
+/target
+/.metrics
+.env
+.env.*

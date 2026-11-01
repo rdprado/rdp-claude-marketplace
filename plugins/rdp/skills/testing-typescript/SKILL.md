@@ -19,8 +19,7 @@ What to read for:
 
 ## Test quality
 
-How a change is built (understand, design, implement, test, check the tests, review) is in the standards'
-*Working method*. Every test must:
+How a change is built (understand, design, implement, test, check the tests, review) is in the `rdp-mode` skill. Every test must:
 
 - Test behavior, not implementation: call the code the way its user does and check what that user would see.
 - Have expected values that don't come from the code under test.
@@ -35,16 +34,16 @@ How a change is built (understand, design, implement, test, check the tests, rev
   - Svelte / SvelteKit and Vite web projects: **Vitest**. It reads the project's Vite config and
     runs our constructors (`constructor(private readonly …)`), which Node's own type stripping
     rejects. Same API as Jest, with `vi.fn()` in place of `jest.fn()`.
-- **No render library for screens.** Views are humble (MVVM, see `clean-architecture-typescript`),
+- **No render library for screens.** Views are humble (MVVM, as in the orders example's `OrdersScreen.svelte`),
   so there is nothing to test in them. Test the ViewModel.
 - **Plain `expect(...)`** matchers — `toBe`, `toEqual`, `toHaveBeenCalledWith`, `toThrow`. No custom assertion libraries.
-- **Hand-built fakes for ports** over `jest.mock` of SDKs. Because boundaries are interfaces (see the `clean-architecture-typescript` skill), a fake is a small object literal implementing the port — clearer than module mocking.
+- **Hand-built fakes for ports** over `jest.mock` of SDKs. Because boundaries are interfaces (see `rdp-mode`), a fake is a small object literal implementing the port — clearer than module mocking.
 - **Build test data by hand:** `new Strategy({ ... })`, `{ userId: 'u-1' }`. No factory libraries, no `faker`.
 - **Time is fixed** (see below).
 
 ## What gets a unit test, what doesn't
 
-Mirrors `.claude/rdp-standards.md` → "Testability":
+Mirrors `rdp-mode` → "Clean Architecture Layers" (what is unit-testable):
 
 For a front (browser or app), with the business logic in the API:
 
@@ -150,7 +149,7 @@ Set up behavior inline per test with `mockResolvedValue` / `mockReturnValue`. Us
 
 ## Time is injected
 
-Domain code never calls `new Date()` / `Date.now()` directly — it takes a `Clock` port (see the `clean-architecture-typescript` skill). Tests pass a fixed clock:
+Domain code never calls `new Date()` / `Date.now()` directly — it takes a `Clock` port (see `rdp-mode`). Tests pass a fixed clock:
 
 ```ts
 const clock: Clock = { now: () => new Date('2026-05-29T10:00:00Z') };
@@ -223,7 +222,7 @@ it('stops the market data stream on dispose', async () => {
 });
 ```
 
-Errors get the same treatment (see `clean-architecture-typescript` → "Errors → feedback"): one test
+Errors get the same treatment (as in the orders example's `OrdersViewModel.test.ts`): one test
 per case, checking the state and the ports.
 
 ```ts

@@ -100,6 +100,8 @@ public class ListGoalsUseCaseTests
 
 Set up behavior inline per test with `Setup(...)`. Use `Verify(..., Times.Never)` to assert a path was *not* taken (validation rejected → repository never called, etc.).
 
+A class that takes a logger gets `NullLogger<T>.Instance`, not a mock.
+
 ## Integration tests
 
 Bootstrap the app via `WebApplicationFactory<Program>`, wrapped in a project-owned `TestWebApplicationFactory` that overrides `ConfigureWebHost` to:

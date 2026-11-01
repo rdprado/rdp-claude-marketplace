@@ -100,7 +100,7 @@ end up) yet: pick it per project, with the team; the tool names below are exampl
 - Unexpected errors also go to the project's monitoring tool through the `Monitoring` port, with
   the stack.
 - .NET (BFF inside the API): `ILogger<T>` is already the port, with Serilog behind it
-  (`clean-architecture` skill → Logging); same stdout path.
+  (orders example, `Program.cs`); same stdout path.
 
 ```ts
 // application/ports/Logger.ts
@@ -165,11 +165,12 @@ email is in it (e.g. `refresh.reused` logs Error without the token).
 The front is the same in both shapes:
 
 ```
-View (page) → TraineesViewModel → TraineesGateway (interface) → HttpTraineesGateway → /api/...
-              TraineesViewModel → TraineeFormValidator.validate (warning only)
+View (page) → OrdersViewModel → OrdersGateway (interface) → HttpOrdersGateway → /api/...
 ```
 
-- The front is MVVM (see `rdp:clean-architecture-typescript` → "Presentation: MVVM"): the
+- The front is MVVM; the orders example in this plugin shows it (`templates/examples/orders/web/src/`:
+  `interface-adapters/screens/orders/OrdersScreen.svelte` and `OrdersViewModel.ts`,
+  `application/ports/OrdersGateway.ts`, `infrastructure/data/orders/HttpOrdersGateway.ts`). The
   ViewModel calls the gateway interface; no front use case when the logic is in the API.
 - Field validators in the browser only warn before sending. The API validates for real, and both
   sides use the same test cases.

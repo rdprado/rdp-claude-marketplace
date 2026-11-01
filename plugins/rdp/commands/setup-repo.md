@@ -24,7 +24,9 @@ Set up this project with the RDP AI standards.
      - Step 2: for each answer already in the Project profile (legacy, stack, GitHub repo,
        tag), re-detect it from the files and keep it if it still matches.
        Ask only for placeholders (`<...>`) and for values that no longer match the
-       files (e.g. profile says .NET but `package.json` now exists too).
+       files (e.g. profile says .NET but `package.json` now exists too). When the developer keeps a value
+       the files don't show yet, write why on that profile line (e.g. `(web/ not created yet)`), so the next
+       sync doesn't ask again; drop the note once the files match.
        Before asking anything, show what is already set, with each value and one line on
        what it is, e.g.:
        ```
@@ -33,15 +35,15 @@ Set up this project with the RDP AI standards.
        - GitHub repo: rdprado/stimulus-app (where story issues are created)
        - Tag: [MarketPlaceExperimentation] (prefix of every issue title)
        - GitHub mapping: rdprado/stimulus-app · docs/ · no project board
-       - RDP standards: up to date (2.11.1)
+       - RDP block: up to date (2.11.1)
        - dryer/crapper: installed (duplicated code, risky untested functions; or: n/a, .NET only, Sonar is the check)
        Still to fill: Stack, Git flow, Docs, Sonar, Build commands
        ```
      - Step 3: compare `CLAUDE.md` with the matching template (see step 3). If the profile
        has a `Template:` line, also compare its `## Template: …` and `## Layout` sections with
        the current stack file and offer the changes (keeping the app name already filled in).
-     - Step 4: compare `.claude/rdp-standards.md` and the RDP block with
-       `${CLAUDE_PLUGIN_ROOT}/templates/` (see step 4).
+     - Step 4: compare the RDP block with the template, and offer to remove an old
+       `.claude/rdp-standards.md` (see step 4).
      - Steps 5–6 as written (both skip what is already done).
      - Step 7: list what changed. Suggest `/init` only if the stack, layout or
        build commands are still placeholders.
@@ -109,40 +111,43 @@ Set up this project with the RDP AI standards.
    template and show me what's missing (the RDP block, Project profile
    lines, sections, ...) and which lines still hold placeholders (`<...>`).
    For each placeholder, fill it from the files (e.g. stack from `.csproj`,
-   build commands, Sonar key from `ci/verify.sh`) and show it, or ask; if it
+   build commands; the Sonar key in step 5) and show it, or ask; if it
    doesn't apply yet (e.g. no CI), suggest `N/A`. Add only what I approve: the
    RDP block at the top, missing sections below it, leaving everything already
    there untouched. If something there contradicts the RDP rules (e.g. plans
    kept in a local file, a task journal), point it out and let me decide.
-4. RDP standards. If `.claude/rdp-standards.md` doesn't exist, copy
-   `${CLAUDE_PLUGIN_ROOT}/templates/rdp-standards.md` there (the RDP block
-   imports it with `@.claude/rdp-standards.md`). If it exists and differs from
-   the template (or the RDP block differs), say "The RDP standards in this
-   project are out of date", list the changes in a few lines, and ask before
-   replacing them.
-5. TypeScript/JavaScript tools (only if the stack includes TypeScript or JavaScript). Two tools by Uncle Bob,
+4. RDP rules. They are the `rdp-mode` skill now; nothing is copied into the project. If
+   `.claude/rdp-standards.md` exists or the RDP block imports it (`@.claude/rdp-standards.md`),
+   say it is an old copy of the rules and ask before deleting the file and that line. If the
+   RDP block differs from the template, say "The RDP block in this project is out of date",
+   list the changes in a few lines, and ask before replacing it.
+   Add `.claude/tmp/` to the project's `.gitignore` (rdp-mode keeps its task logs there).
+5. TypeScript/JavaScript tools (only if the stack includes TypeScript or JavaScript). Three tools by Uncle Bob,
    installed once per machine in one Python environment, `$HOME\.venvs\pnt-tools`:
-   `dryer` (finds duplicated code) and `crapper` (CRAP score: complexity × missing test
-   coverage, per function). .NET has none of these yet: Sonar is its only check.
+   `dryer` (finds duplicated code), `crapper` (CRAP score: complexity × missing test
+   coverage, per function) and `mutator` (mutation testing: changes the code and checks a test
+   fails). .NET has none of these yet: Sonar is its only check.
    A project can be .NET only, TypeScript/JavaScript only, or both. With both, offer
    the tools for the TypeScript/JavaScript code; the .NET code stays on Sonar only.
    - Run every command in this step in PowerShell (not Bash).
    - Whenever this step mentions them (installed or not), explain them first, in these words:
      ```
-     Two code-quality checks by Uncle Bob, for TypeScript/JavaScript:
+     Three code-quality checks by Uncle Bob, for TypeScript/JavaScript:
      - dryer: finds duplicated code
      - crapper: finds risky untested functions
+     - mutator: finds code whose tests don't notice when it breaks
      ```
-   - Check them: `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m dryer --help` and
-     `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m crapper --help`. If both run, say
-     "Both are already installed on this machine." and skip the install.
-   - Otherwise say they are recommended and ask:
-     "Install them? (y/n)". They need Python 3.11+ and git:
+   - Check them: `$HOME\.venvs\pnt-tools\Scripts\python -X utf8 -m <tool> --help` for `dryer`,
+     `crapper` and `mutator`. If all three run, say "All three are already installed on this
+     machine." and skip the install.
+   - Otherwise say they are recommended and ask: "Install them? (y/n)". They need
+     Python 3.11+, and come from this plugin (`tools/quality/`, our copies of Uncle Bob's tools):
      ```
      python -m venv $HOME\.venvs\pnt-tools
-     $HOME\.venvs\pnt-tools\Scripts\pip install git+https://github.com/unclebob/dryer@66ff6d21a42c04afcad89c78a80066176d1294b0 git+https://github.com/unclebob/crapper@6fd92c4c9bcc56efb64a2f8743d5a2993bcfd42d
+     $HOME\.venvs\pnt-tools\Scripts\pip install "${CLAUDE_PLUGIN_ROOT}/tools/quality/dryer" "${CLAUDE_PLUGIN_ROOT}/tools/quality/crapper" "${CLAUDE_PLUGIN_ROOT}/tools/quality/mutator"
      ```
-   - Add `.metrics/` to the project's `.gitignore` (both write their reports there).
+   - Add `.metrics/` and `target/` to the project's `.gitignore` (the tools write their reports in
+     `.metrics/`; mutator works in `target/`).
    - First diagnostic, optional. Offer it if the project is not legacy, or if the developer
      asks: "Run a first check of duplication and complexity? It only reports; nothing
      changes. (y/n)". If yes, from the project root, with
@@ -159,6 +164,9 @@ Set up this project with the RDP AI standards.
        (complexity only; CRAP shows N/A).
      - Show the 10 closest dryer pairs and the 10 worst crapper functions. Say it's the
        starting point, not errors to fix now. Don't refactor during setup.
+   Sonar (only if the stack includes .NET): follow the `sonar` skill → "Ready to run", in its order (the key
+   first, then the machine), and fill the "Sonar (.NET)" section. Add `.sonarqube/` to the `.gitignore`
+   (the script writes its work and report there).
 6. GitHub mapping. Skip it if `CLAUDE.md` already has a `## GitHub mapping`
    section (update it only if the developer asks).
    - Docs folder: the folder where this project's documentation lives (the
@@ -185,8 +193,8 @@ Set up this project with the RDP AI standards.
 7. Say what was done. In an empty project, skip `/init` (there's no code to read yet) and say
    to run it once the first code exists. Otherwise tell me to run `/init` now: it fills in the
    stack, the layout and the build commands below the RDP block and the
-   Project profile. Then `CLAUDE.md` and `.claude/rdp-standards.md` must be
-   committed.
+   Project profile. Then `CLAUDE.md` (and the removal of an old
+   `.claude/rdp-standards.md`) must be committed.
 8. Finish ready for a context clear: everything decided in this conversation
    must already be in the files (nothing left only in chat). End with:
    "Setup done. If you're going to start working on the project now, I
