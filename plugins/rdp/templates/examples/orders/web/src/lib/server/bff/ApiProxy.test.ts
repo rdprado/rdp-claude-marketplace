@@ -62,7 +62,7 @@ describe('ApiProxy', () => {
 
   it('passes the status and body of an API error through unchanged', async () => {
     // Arrange
-    const errorBody = '{"error":{"code":"order-not-open"}}';
+    const errorBody = '{"error":{"code":"client-order-id-reused"}}';
     const proxy = new ApiProxy(
       sessions(ACTIVE),
       apiAnswering(() => okJson(errorBody, 409)),

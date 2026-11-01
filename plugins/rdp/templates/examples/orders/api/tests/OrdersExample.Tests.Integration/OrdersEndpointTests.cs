@@ -30,11 +30,7 @@ public class OrdersEndpointTests(TestWebApplicationFactory factory) : IClassFixt
         Assert.Equal("buy", order.GetProperty("side").GetString());
         Assert.Equal(100, order.GetProperty("quantity").GetInt32());
         Assert.Equal(37.5m, order.GetProperty("price").GetDecimal());
-        Assert.Equal("open", order.GetProperty("status").GetString());
-        Assert.True(order.GetProperty("canEdit").GetBoolean());
-        Assert.True(order.GetProperty("canCancel").GetBoolean());
         Assert.Equal(now, order.GetProperty("createdAt").GetDateTimeOffset());
-        Assert.Equal(now, order.GetProperty("updatedAt").GetDateTimeOffset());
     }
 
     [Fact]
@@ -140,161 +136,10 @@ public class OrdersEndpointTests(TestWebApplicationFactory factory) : IClassFixt
         Assert.Equal(["NEWER", "OLDER"], symbols);
     }
 
-    [Fact]
-    public async Task Get_ExistingOrder_Returns200WithIt()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "VALE3");
-
-        // Act
-        var response = await client.GetAsync($"{Orders}/{id}");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await ReadJsonAsync(response);
-        Assert.Equal(id, order.GetProperty("id").GetString());
-        Assert.Equal("VALE3", order.GetProperty("symbol").GetString());
-    }
-
-    [Theory]
-    [InlineData("not-a-guid")]
-    [InlineData("00000000-0000-0000-0000-000000000001")]
-    public async Task Get_MissingOrBadId_Returns404OrderNotFound(string id)
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-
-        // Act
-        var response = await client.GetAsync($"{Orders}/{id}");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("""{"error":{"code":"order-not-found"}}""", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Edit_OpenOrder_Returns200WithNewValues()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "ITUB4");
-        factory.Time.Advance(TimeSpan.FromMinutes(5));
-        var editedAt = factory.Time.GetUtcNow();
-
-        // Act
-        var response = await client.PutAsJsonAsync($"{Orders}/{id}", new { quantity = 7, price = 31.2m });
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await ReadJsonAsync(response);
-        Assert.Equal(7, order.GetProperty("quantity").GetInt32());
-        Assert.Equal(31.2m, order.GetProperty("price").GetDecimal());
-        Assert.Equal(editedAt, order.GetProperty("updatedAt").GetDateTimeOffset());
-    }
-
-    [Fact]
-    public async Task Edit_WithInvalidValues_Returns400WithFields()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "ITUB4");
-
-        // Act
-        var response = await client.PutAsJsonAsync($"{Orders}/{id}", new { quantity = 0, price = 1 });
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(
-            """{"error":{"code":"validation-failed","fields":{"quantity":"must-be-positive"}}}""",
-            await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Edit_MissingOrder_Returns404OrderNotFound()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-
-        // Act
-        var response = await client.PutAsJsonAsync($"{Orders}/{Guid.NewGuid()}", new { quantity = 1, price = 1 });
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("""{"error":{"code":"order-not-found"}}""", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Cancel_OpenOrder_Returns200CancelledWithNoActionsLeft()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "BBAS3");
-
-        // Act
-        var response = await client.PostAsync($"{Orders}/{id}/cancel", null);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await ReadJsonAsync(response);
-        Assert.Equal("cancelled", order.GetProperty("status").GetString());
-        Assert.False(order.GetProperty("canEdit").GetBoolean());
-        Assert.False(order.GetProperty("canCancel").GetBoolean());
-    }
-
-    [Fact]
-    public async Task Cancel_MissingOrder_Returns404OrderNotFound()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-
-        // Act
-        var response = await client.PostAsync($"{Orders}/{Guid.NewGuid()}/cancel", null);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("""{"error":{"code":"order-not-found"}}""", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Cancel_CancelledOrder_Returns409OrderNotOpen()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "BBAS3");
-        await client.PostAsync($"{Orders}/{id}/cancel", null);
-
-        // Act
-        var response = await client.PostAsync($"{Orders}/{id}/cancel", null);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("""{"error":{"code":"order-not-open"}}""", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Edit_CancelledOrder_Returns409OrderNotOpenAndKeepsValues()
-    {
-        // Arrange
-        var client = factory.CreateAuthenticatedClient();
-        var id = await CreateAsync(client, "BBAS3");
-        await client.PostAsync($"{Orders}/{id}/cancel", null);
-
-        // Act
-        var response = await client.PutAsJsonAsync($"{Orders}/{id}", new { quantity = 9, price = 9 });
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("""{"error":{"code":"order-not-open"}}""", await response.Content.ReadAsStringAsync());
-        var stored = await ReadJsonAsync(await client.GetAsync($"{Orders}/{id}"));
-        Assert.Equal(1, stored.GetProperty("quantity").GetInt32());
-    }
-
-    private static async Task<string> CreateAsync(HttpClient client, string symbol)
+    private static async Task CreateAsync(HttpClient client, string symbol)
     {
         var response = await client.PostAsJsonAsync(Orders, new { clientOrderId = Guid.NewGuid(), symbol, side = "sell", quantity = 1, price = 10m });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await ReadJsonAsync(response)).GetProperty("id").GetString()!;
     }
 
     private static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response)

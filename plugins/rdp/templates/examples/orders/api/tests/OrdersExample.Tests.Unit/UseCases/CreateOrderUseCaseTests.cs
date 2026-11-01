@@ -43,7 +43,6 @@ public class CreateOrderUseCaseTests
         Assert.Equal(Guid.Parse(ClientOrderId), output.Order.ClientOrderId);
         Assert.Equal("PETR4", output.Order.Symbol);
         Assert.Equal(OrderSide.Sell, output.Order.Side);
-        Assert.Equal(OrderStatus.Open, output.Order.Status);
         Assert.Equal(Now.UtcDateTime, output.Order.CreatedAt);
         _orderRepositoryMock.Verify(r => r.AddAsync(It.Is<Order>(o => o.Id == NewId)), Times.Once);
     }

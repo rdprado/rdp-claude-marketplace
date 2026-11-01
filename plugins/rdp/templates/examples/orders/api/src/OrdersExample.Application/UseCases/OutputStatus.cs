@@ -5,7 +5,6 @@ namespace OrdersExample.Application.UseCases;
 public enum OutputStatus
 {
     Success = 0,
-    NotFound = 1,
     Validation = 2,
     Conflict = 3,
 }

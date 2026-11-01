@@ -23,7 +23,7 @@ public sealed class EFOrderRepositoryTests : IDisposable
     public void Dispose() => _connection.Dispose();
 
     [Fact]
-    public async Task FindAsync_AfterAdd_ReturnsEveryValueWithUtcDates()
+    public async Task FindByClientOrderIdAsync_AfterAdd_ReturnsEveryValueWithUtcDates()
     {
         // Arrange
         var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "PETR4", OrderSide.Sell, 100, 37.45m, CreatedAt);
@@ -33,15 +33,15 @@ public sealed class EFOrderRepositoryTests : IDisposable
         // Act
         Order? found;
         await using (var db = NewContext())
-            found = await new EFOrderRepository(db).FindAsync(order.Id);
+            found = await new EFOrderRepository(db).FindByClientOrderIdAsync(order.ClientOrderId);
 
         // Assert
         Assert.NotNull(found);
+        Assert.Equal(order.Id, found.Id);
         Assert.Equal("PETR4", found.Symbol);
         Assert.Equal(OrderSide.Sell, found.Side);
         Assert.Equal(100, found.Quantity);
         Assert.Equal(37.45m, found.Price);
-        Assert.Equal(OrderStatus.Open, found.Status);
         Assert.Equal(CreatedAt, found.CreatedAt);
         Assert.Equal(DateTimeKind.Utc, found.CreatedAt.Kind);
     }
@@ -66,48 +66,6 @@ public sealed class EFOrderRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FindByClientOrderIdAsync_ReturnsTheOrderWithThatClientOrderId()
-    {
-        // Arrange
-        var clientOrderId = Guid.NewGuid();
-        var order = Order.Open(Guid.NewGuid(), clientOrderId, "PETR4", OrderSide.Buy, 1, 1m, CreatedAt);
-        await using (var db = NewContext())
-            await new EFOrderRepository(db).AddAsync(order);
-
-        // Act
-        Order? found;
-        await using (var db = NewContext())
-            found = await new EFOrderRepository(db).FindByClientOrderIdAsync(clientOrderId);
-
-        // Assert
-        Assert.Equal(order.Id, found?.Id);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_CancelledOrder_IsStoredCancelled()
-    {
-        // Arrange
-        var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "VALE3", OrderSide.Buy, 1, 60m, CreatedAt);
-        await using (var db = NewContext())
-            await new EFOrderRepository(db).AddAsync(order);
-        await using (var db = NewContext())
-        {
-            var repository = new EFOrderRepository(db);
-            var loaded = await repository.FindAsync(order.Id);
-            loaded!.Cancel(CreatedAt.AddMinutes(1));
-
-            // Act
-            await repository.UpdateAsync(loaded);
-        }
-
-        // Assert
-        await using var check = NewContext();
-        var stored = await new EFOrderRepository(check).FindAsync(order.Id);
-        Assert.Equal(OrderStatus.Cancelled, stored?.Status);
-        Assert.Equal(CreatedAt.AddMinutes(1), stored?.UpdatedAt);
-    }
-
-    [Fact]
     public async Task ListAsync_ReturnsNewestFirst()
     {
         // Arrange
@@ -128,13 +86,13 @@ public sealed class EFOrderRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FindAsync_UnknownId_ReturnsNull()
+    public async Task FindByClientOrderIdAsync_UnknownId_ReturnsNull()
     {
         // Arrange
         await using var db = NewContext();
 
         // Act
-        var found = await new EFOrderRepository(db).FindAsync(Guid.NewGuid());
+        var found = await new EFOrderRepository(db).FindByClientOrderIdAsync(Guid.NewGuid());
 
         // Assert
         Assert.Null(found);

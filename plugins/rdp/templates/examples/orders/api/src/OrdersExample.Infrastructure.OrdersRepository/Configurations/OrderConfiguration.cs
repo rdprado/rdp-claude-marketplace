@@ -13,14 +13,10 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasKey(o => o.Id);
         builder.Property(o => o.Symbol).HasMaxLength(OrderRules.SymbolMaxLength).IsRequired();
         builder.Property(o => o.Side).HasConversion<string>().HasMaxLength(8);
-        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(16);
         // SQLite gives DateTime back with Kind Unspecified; the values are UTC, so say so (the JSON then ends in "Z").
         builder.Property(o => o.CreatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
-        builder.Property(o => o.UpdatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
         builder.HasIndex(o => o.CreatedAt);
         // The real guard for idempotency: two sends racing with the same client order id store one order.
         builder.HasIndex(o => o.ClientOrderId).IsUnique();
-        builder.Ignore(o => o.CanEdit);
-        builder.Ignore(o => o.CanCancel);
     }
 }

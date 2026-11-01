@@ -7,8 +7,6 @@ public static class ErrorCodes
     public const string Unexpected = "unexpected";
     public const string Unauthorized = "unauthorized";
     public const string ValidationFailed = "validation-failed";
-    public const string OrderNotFound = "order-not-found";
-    public const string OrderNotOpen = "order-not-open";
     public const string ClientOrderIdReused = "client-order-id-reused";
 
     // What ASP.NET Core answers on its own (no endpoint, wrong method, wrong Content-Type...).

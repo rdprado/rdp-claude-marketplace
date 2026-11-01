@@ -40,11 +40,11 @@ describe('toResult', () => {
   });
 
   it.each([
-    [404, { error: { code: 'order-not-found' } }, { status: 'notFound', error: 'order-not-found' }],
+    [404, { error: { code: 'not-found' } }, { status: 'notFound', error: 'not-found' }],
     [
       409,
-      { error: { code: 'order-not-open' } },
-      { status: 'conflict', error: 'order-not-open', details: undefined }
+      { error: { code: 'client-order-id-reused' } },
+      { status: 'conflict', error: 'client-order-id-reused', details: undefined }
     ]
   ])('maps %i to its status with the code', (status, body, expected) => {
     // Act

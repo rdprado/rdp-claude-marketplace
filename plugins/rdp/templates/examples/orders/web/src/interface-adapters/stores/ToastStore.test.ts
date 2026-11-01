@@ -7,12 +7,12 @@ describe('ToastStore', () => {
     // Arrange
     const store = new ToastStore();
     store.show('feedback.order-created');
-    store.show('feedback.order-cancelled');
+    store.show('feedback.order-created');
 
     // Act
     store.dismiss(1);
 
     // Assert
-    expect(store.state.toasts).toEqual([{ id: 2, messageKey: 'feedback.order-cancelled' }]);
+    expect(store.state.toasts).toEqual([{ id: 2, messageKey: 'feedback.order-created' }]);
   });
 });

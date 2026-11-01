@@ -3,18 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { UnexpectedResponseError } from '../http/UnexpectedResponseError.ts';
 import { toOrder, toOrders } from './orderMapping.ts';
 
-// As the API sends it (camelCase JSON, see PLAN.md → API contract).
+// As the API sends it (camelCase JSON, api/…/Contracts/OrderResponse.cs).
 const json = {
   id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   symbol: 'PETR4',
   side: 'sell',
   quantity: 100,
   price: 37.45,
-  status: 'cancelled',
-  canEdit: false,
-  canCancel: false,
-  createdAt: '2026-10-28T12:00:00Z',
-  updatedAt: '2026-10-28T12:05:00Z'
+  createdAt: '2026-10-28T12:00:00Z'
 };
 
 describe('toOrder', () => {
@@ -29,18 +25,13 @@ describe('toOrder', () => {
       side: 'sell',
       quantity: 100,
       price: 37.45,
-      status: 'cancelled',
-      canEdit: false,
-      canCancel: false,
-      createdAt: new Date('2026-10-28T12:00:00Z'),
-      updatedAt: new Date('2026-10-28T12:05:00Z')
+      createdAt: new Date('2026-10-28T12:00:00Z')
     });
   });
 
   it.each([
     ['an unknown side', { ...json, side: 'short' }],
-    ['an unknown status', { ...json, status: 'filled' }],
-    ['a missing canEdit', { ...json, canEdit: undefined }],
+    ['a missing createdAt', { ...json, createdAt: undefined }],
     ['a price as text', { ...json, price: '37.45' }],
     ['null', null]
   ])('throws on %s', (_, body) => {

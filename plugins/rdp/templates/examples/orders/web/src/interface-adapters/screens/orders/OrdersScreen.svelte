@@ -77,8 +77,6 @@
           <th>{t('orders.side')}</th>
           <th class="num">{t('orders.quantity')}</th>
           <th class="num">{t('orders.price')}</th>
-          <th>{t('orders.status')}</th>
-          <th class="actions"></th>
         </tr>
       </thead>
       <tbody>
@@ -86,55 +84,8 @@
           <tr>
             <td class="symbol">{row.symbol}</td>
             <td><span class="side" data-side={row.sideKey}>{t(row.sideKey)}</span></td>
-            {#if row.edit}
-              <td class="num">
-                <input
-                  type="number"
-                  aria-label={t('orders.quantity')}
-                  value={row.edit.quantity}
-                  oninput={(e) => vm.changeEdit({ quantity: e.currentTarget.value })}
-                />
-                {#if $vm.editErrors.quantity}<small role="alert">{t($vm.editErrors.quantity)}</small>{/if}
-              </td>
-              <td class="num">
-                <input
-                  type="number"
-                  step="any"
-                  aria-label={t('orders.price')}
-                  value={row.edit.price}
-                  oninput={(e) => vm.changeEdit({ price: e.currentTarget.value })}
-                />
-                {#if $vm.editErrors.price}<small role="alert">{t($vm.editErrors.price)}</small>{/if}
-              </td>
-              <td><span class="status" data-status={row.statusKey}>{t(row.statusKey)}</span></td>
-              <td class="actions">
-                <button type="button" class="primary" disabled={$vm.busy} onclick={() => vm.saveEdit()}
-                  >{t('orders.save')}</button
-                >
-                <button type="button" onclick={() => vm.stopEdit()}>{t('orders.discard')}</button>
-              </td>
-            {:else}
-              <td class="num">{row.quantityText}</td>
-              <td class="num">{row.priceText}</td>
-              <td><span class="status" data-status={row.statusKey}>{t(row.statusKey)}</span></td>
-              <td class="actions">
-                {#if row.canEdit}
-                  <button type="button" disabled={$vm.busy} onclick={() => vm.startEdit(row.id)}
-                    >{t('orders.edit')}</button
-                  >
-                {/if}
-                {#if row.canCancel}
-                  <button
-                    type="button"
-                    class="danger"
-                    disabled={$vm.busy}
-                    onclick={() => vm.cancelOrder(row.id)}
-                  >
-                    {t('orders.cancel')}
-                  </button>
-                {/if}
-              </td>
-            {/if}
+            <td class="num">{row.quantityText}</td>
+            <td class="num">{row.priceText}</td>
           </tr>
         {/each}
       </tbody>
@@ -185,10 +136,6 @@
     border: 1px solid var(--border);
     border-radius: 8px;
   }
-  td input {
-    width: 7rem;
-    text-align: right;
-  }
   small[role='alert'] {
     color: var(--danger);
     font-size: 0.78rem;
@@ -197,12 +144,6 @@
     background: var(--primary);
     border-color: var(--primary);
     color: var(--primary-text);
-  }
-  .danger {
-    color: var(--danger);
-  }
-  .danger:hover:not(:disabled) {
-    border-color: var(--danger);
   }
   .banner {
     display: flex;
@@ -258,24 +199,5 @@
   }
   .side[data-side$='sell'] {
     color: var(--sell);
-  }
-  .status {
-    display: inline-block;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--primary);
-  }
-  .status[data-status$='cancelled'] {
-    background: color-mix(in srgb, var(--muted) 15%, transparent);
-    color: var(--muted);
-  }
-  .actions {
-    text-align: right;
-    white-space: nowrap;
-  }
-  .actions button + button {
-    margin-left: 0.4rem;
   }
 </style>

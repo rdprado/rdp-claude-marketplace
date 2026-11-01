@@ -43,7 +43,7 @@ public class ErrorShapeTests(TestWebApplicationFactory factory) : IClassFixture<
         var client = factory.CreateAuthenticatedClient();
 
         // Act
-        var response = await client.DeleteAsync("/api/v1/orders/x");
+        var response = await client.DeleteAsync("/api/v1/orders");
 
         // Assert
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);

@@ -2,7 +2,7 @@
 // Layer: Infrastructure — the API's order JSON → the app's Order read model, parsed once where it comes
 // in. The API's JSON type stays private to this file.
 // JSON enters as `unknown` and is checked field by field here; never `any` or `as Order`.
-import type { Order, OrderSide, OrderStatus } from '../../../application/ports/OrdersGateway.ts';
+import type { Order, OrderSide } from '../../../application/ports/OrdersGateway.ts';
 import { isObject } from '../../../application/isObject.ts';
 import { UnexpectedResponseError } from '../http/UnexpectedResponseError.ts';
 
@@ -12,15 +12,10 @@ type OrderJson = {
   side: string;
   quantity: number;
   price: number;
-  status: string;
-  canEdit: boolean;
-  canCancel: boolean;
   createdAt: string;
-  updatedAt: string;
 };
 
 const SIDES: readonly OrderSide[] = ['buy', 'sell'];
-const STATUSES: readonly OrderStatus[] = ['open', 'cancelled'];
 
 export function toOrders(json: unknown): readonly Order[] {
   if (!Array.isArray(json)) throw malformed('a list of orders');
@@ -30,19 +25,14 @@ export function toOrders(json: unknown): readonly Order[] {
 export function toOrder(json: unknown): Order {
   if (!isOrderJson(json)) throw malformed('an order');
   const side = SIDES.find((s) => s === json.side);
-  const status = STATUSES.find((s) => s === json.status);
-  if (!side || !status) throw malformed(`an order with side "${json.side}" and status "${json.status}"`);
+  if (!side) throw malformed(`an order with side "${json.side}"`);
   return {
     id: json.id,
     symbol: json.symbol,
     side,
     quantity: json.quantity,
     price: json.price,
-    status,
-    canEdit: json.canEdit,
-    canCancel: json.canCancel,
-    createdAt: new Date(json.createdAt),
-    updatedAt: new Date(json.updatedAt)
+    createdAt: new Date(json.createdAt)
   };
 }
 
@@ -53,12 +43,8 @@ const ORDER_JSON_FIELDS = {
   side: 'string',
   quantity: 'number',
   price: 'number',
-  status: 'string',
-  canEdit: 'boolean',
-  canCancel: 'boolean',
-  createdAt: 'string',
-  updatedAt: 'string'
-} as const satisfies Record<keyof OrderJson, 'string' | 'number' | 'boolean'>;
+  createdAt: 'string'
+} as const satisfies Record<keyof OrderJson, 'string' | 'number'>;
 
 function isOrderJson(json: unknown): json is OrderJson {
   return (

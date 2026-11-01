@@ -3,7 +3,7 @@ using OrdersExample.Entities;
 
 namespace OrdersExample.Application.UseCases;
 
-// What the order use cases return: plain data, never the entity. CanEdit / CanCancel come from the entity's rules.
+// What the order use cases return: plain data, never the entity.
 public sealed record OrderView(
     Guid Id,
     Guid ClientOrderId,
@@ -11,13 +11,8 @@ public sealed record OrderView(
     OrderSide Side,
     int Quantity,
     decimal Price,
-    OrderStatus Status,
-    bool CanEdit,
-    bool CanCancel,
-    DateTime CreatedAt,
-    DateTime UpdatedAt)
+    DateTime CreatedAt)
 {
     public static OrderView From(Order order) => new(
-        order.Id, order.ClientOrderId, order.Symbol, order.Side, order.Quantity, order.Price, order.Status,
-        order.CanEdit, order.CanCancel, order.CreatedAt, order.UpdatedAt);
+        order.Id, order.ClientOrderId, order.Symbol, order.Side, order.Quantity, order.Price, order.CreatedAt);
 }

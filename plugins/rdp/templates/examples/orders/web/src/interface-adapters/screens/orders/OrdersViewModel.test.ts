@@ -17,11 +17,7 @@ function order(overrides: Partial<Order> = {}): Order {
     side: 'buy',
     quantity: 1000,
     price: 37.5,
-    status: 'open',
-    canEdit: true,
-    canCancel: true,
     createdAt: CREATED,
-    updatedAt: CREATED,
     ...overrides
   };
 }
@@ -29,7 +25,7 @@ function order(overrides: Partial<Order> = {}): Order {
 // Every method fails loudly unless the test sets it.
 function gateway(overrides: Partial<OrdersGateway> = {}): OrdersGateway {
   const unexpected = () => Promise.reject(new Error('not expected in this test'));
-  return { list: unexpected, create: unexpected, edit: unexpected, cancel: unexpected, ...overrides };
+  return { list: unexpected, create: unexpected, ...overrides };
 }
 
 function ports() {
@@ -57,8 +53,8 @@ describe('OrdersViewModel', () => {
     it('shows each order ready to display, in the order the API sent them', async () => {
       // Act
       const { vm } = await loadedWith([
-        order({ id: 'o-2', symbol: 'VALE3', side: 'sell', quantity: 200, price: 61.2, canEdit: false }),
-        order({ id: 'o-1', status: 'cancelled', canEdit: false, canCancel: false })
+        order({ id: 'o-2', symbol: 'VALE3', side: 'sell', quantity: 200, price: 61.2 }),
+        order({ id: 'o-1' })
       ]);
 
       // Assert
@@ -68,22 +64,14 @@ describe('OrdersViewModel', () => {
           symbol: 'VALE3',
           sideKey: 'orders.side.sell',
           quantityText: '200',
-          priceText: '61,20',
-          statusKey: 'orders.status.open',
-          canEdit: false,
-          canCancel: true,
-          edit: null
+          priceText: '61,20'
         },
         {
           id: 'o-1',
           symbol: 'PETR4',
           sideKey: 'orders.side.buy',
           quantityText: '1.000',
-          priceText: '37,50',
-          statusKey: 'orders.status.cancelled',
-          canEdit: false,
-          canCancel: false,
-          edit: null
+          priceText: '37,50'
         }
       ]);
       expect(vm.state.loading).toBe(false);
@@ -240,7 +228,6 @@ describe('OrdersViewModel', () => {
         symbol: 'errors.required',
         quantity: 'errors.must-be-positive'
       });
-      expect(vm.state.editErrors).toEqual({});
       expect(vm.state.draft.quantity).toBe('0');
       expect(toaster.show).not.toHaveBeenCalled();
     });
@@ -310,116 +297,40 @@ describe('OrdersViewModel', () => {
       // Assert
       expect(vm.state.rows.map((row) => row.id)).toEqual(['o-1']);
     });
-  });
 
-  describe('edit', () => {
-    it('opens the row for editing with the current quantity and price', async () => {
+    it('shows the unexpected message without the retry button when the request fails', async () => {
       // Arrange
-      const { vm } = await loadedWith([order(), order({ id: 'o-2' })]);
+      const create = () => Promise.reject(new Error('network down'));
+      const { vm } = await loadedWith([], { create });
 
       // Act
-      vm.startEdit('o-1');
+      await vm.create();
 
       // Assert
-      expect(vm.state.rows.map((row) => row.edit)).toEqual([{ quantity: '1000', price: '37.5' }, null]);
+      expect(vm.state.errorKey).toBe('errors.unexpected');
+      expect(vm.state.canRetry).toBe(false);
     });
 
-    it('saves the changes, shows the updated order and closes the row', async () => {
+    it('takes back the offer to reload the list when it starts', async () => {
       // Arrange
-      const edit = vi.fn<OrdersGateway['edit']>(() =>
-        Promise.resolve(Result.success(order({ quantity: 500, price: 38 })))
+      const { toaster, monitoring, ids } = ports();
+      const vm = new OrdersViewModel(
+        gateway({
+          list: () => Promise.reject(new Error('network down')),
+          create: () => Promise.resolve(Result.success(order()))
+        }),
+        toaster,
+        monitoring,
+        ids
       );
-      const { vm, toaster } = await loadedWith([order()], { edit });
-      vm.startEdit('o-1');
-      vm.changeEdit({ quantity: '500', price: '38' });
+      await vm.load();
 
       // Act
-      await vm.saveEdit();
+      await vm.create();
 
       // Assert
-      expect(edit).toHaveBeenCalledWith('o-1', { quantity: 500, price: 38 });
-      expect(vm.state.rows[0]).toMatchObject({ quantityText: '500', priceText: '38,00', edit: null });
-      expect(toaster.show).toHaveBeenCalledWith('feedback.order-updated');
-    });
-
-    it('shows the field messages on the edited row when the API rejects the changes', async () => {
-      // Arrange
-      const edit = () =>
-        Promise.resolve(Result.validation<Order>('validation-failed', { price: 'must-be-positive' }));
-      const { vm } = await loadedWith([order()], { edit });
-      vm.startEdit('o-1');
-
-      // Act
-      await vm.saveEdit();
-
-      // Assert
-      expect(vm.state.editErrors).toEqual({ price: 'errors.must-be-positive' });
-      expect(vm.state.draftErrors).toEqual({});
-      expect(vm.state.rows[0]?.edit).not.toBeNull();
-    });
-
-    it('shows the banner when the order is no longer open', async () => {
-      // Arrange
-      const edit = () => Promise.resolve(Result.conflict<Order>('order-not-open'));
-      const { vm } = await loadedWith([order()], { edit });
-      vm.startEdit('o-1');
-
-      // Act
-      await vm.saveEdit();
-
-      // Assert
-      expect(vm.state.errorKey).toBe('errors.order-not-open');
-      expect(vm.state.busy).toBe(false);
-    });
-
-    it('closes the row without saving when the edit is discarded', async () => {
-      // Arrange
-      const edit = vi.fn<OrdersGateway['edit']>();
-      const { vm } = await loadedWith([order()], { edit });
-      vm.startEdit('o-1');
-
-      // Act
-      vm.stopEdit();
-      await vm.saveEdit();
-
-      // Assert
-      expect(vm.state.rows[0]?.edit).toBeNull();
-      expect(edit).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('cancelOrder', () => {
-    it('shows the cancelled order with the actions the API now allows, and confirms', async () => {
-      // Arrange
-      const cancel = vi.fn<OrdersGateway['cancel']>(() =>
-        Promise.resolve(Result.success(order({ status: 'cancelled', canEdit: false, canCancel: false })))
-      );
-      const { vm, toaster } = await loadedWith([order()], { cancel });
-
-      // Act
-      await vm.cancelOrder('o-1');
-
-      // Assert
-      expect(cancel).toHaveBeenCalledWith('o-1');
-      expect(vm.state.rows[0]).toMatchObject({
-        statusKey: 'orders.status.cancelled',
-        canEdit: false,
-        canCancel: false
-      });
-      expect(toaster.show).toHaveBeenCalledWith('feedback.order-cancelled');
-    });
-
-    it('shows the banner when the order no longer exists', async () => {
-      // Arrange
-      const cancel = () => Promise.resolve(Result.notFound<Order>('order-not-found'));
-      const { vm, toaster } = await loadedWith([order()], { cancel });
-
-      // Act
-      await vm.cancelOrder('o-1');
-
-      // Assert
-      expect(vm.state.errorKey).toBe('errors.order-not-found');
-      expect(toaster.show).not.toHaveBeenCalled();
+      expect(vm.state.canRetry).toBe(false);
+      expect(vm.state.errorKey).toBeNull();
     });
 
     it('is busy while the request runs', async () => {
@@ -428,7 +339,7 @@ describe('OrdersViewModel', () => {
       const { toaster, monitoring, ids } = ports();
       const vm: OrdersViewModel = new OrdersViewModel(
         gateway({
-          cancel: () => {
+          create: () => {
             busyDuringCall = vm.state.busy;
             return Promise.resolve(Result.success(order()));
           }
@@ -439,28 +350,11 @@ describe('OrdersViewModel', () => {
       );
 
       // Act
-      await vm.cancelOrder('o-1');
+      await vm.create();
 
       // Assert
       expect(busyDuringCall).toBe(true);
       expect(vm.state.busy).toBe(false);
-    });
-
-    it('takes back the retry offer when the next action starts', async () => {
-      // Arrange
-      const cancel = vi
-        .fn<OrdersGateway['cancel']>()
-        .mockRejectedValueOnce(new Error('network down'))
-        .mockResolvedValueOnce(Result.success(order({ status: 'cancelled' })));
-      const { vm } = await loadedWith([order()], { cancel });
-      await vm.cancelOrder('o-1');
-
-      // Act
-      await vm.cancelOrder('o-1');
-
-      // Assert
-      expect(vm.state.canRetry).toBe(false);
-      expect(vm.state.errorKey).toBeNull();
     });
   });
 });

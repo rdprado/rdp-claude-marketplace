@@ -39,8 +39,6 @@ describe('DictionaryTranslator', () => {
     const codes = [
       'unexpected',
       'validation-failed',
-      'order-not-found',
-      'order-not-open',
       'client-order-id-reused',
       'required',
       'invalid',

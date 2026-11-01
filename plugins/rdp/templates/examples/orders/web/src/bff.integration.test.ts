@@ -67,7 +67,7 @@ const apiCalls: { method: string; url: string; headers: IncomingMessage['headers
 function api(request: IncomingMessage): { status: number; body: object } {
   apiCalls.push({ method: request.method ?? '', url: request.url ?? '', headers: request.headers });
   if (request.method === 'GET') return { status: 200, body: [] };
-  return { status: 409, body: { error: { code: 'order-not-open' } } };
+  return { status: 409, body: { error: { code: 'client-order-id-reused' } } };
 }
 
 let upstream: Server;
@@ -286,13 +286,13 @@ describe('BFF entry', () => {
     const browser = await signedInBrowser();
 
     // Act
-    const sent = await browser.send('POST', '/api/v1/orders/3f2504e0-4f89-11d3-9a0c-0305e82c3301/cancel', {
+    const sent = await browser.send('POST', '/api/v1/orders', {
       origin: APP
     });
 
     // Assert
     expect(sent.response.status).toBe(409);
-    expect(JSON.parse(sent.text)).toEqual({ error: { code: 'order-not-open' } });
+    expect(JSON.parse(sent.text)).toEqual({ error: { code: 'client-order-id-reused' } });
   });
 
   it('renews an expired token, then logs refresh.reused when the old cookie comes back', async () => {

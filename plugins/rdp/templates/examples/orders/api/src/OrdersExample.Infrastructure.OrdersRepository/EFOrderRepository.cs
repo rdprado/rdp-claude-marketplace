@@ -11,8 +11,6 @@ public sealed class EFOrderRepository(OrdersDbContext db) : IOrderRepository
     public async Task<IReadOnlyList<Order>> ListAsync()
         => await db.Orders.AsNoTracking().OrderByDescending(o => o.CreatedAt).ToListAsync();
 
-    public Task<Order?> FindAsync(Guid id) => db.Orders.SingleOrDefaultAsync(o => o.Id == id);
-
     public Task<Order?> FindByClientOrderIdAsync(Guid clientOrderId)
         => db.Orders.SingleOrDefaultAsync(o => o.ClientOrderId == clientOrderId);
 
@@ -35,10 +33,4 @@ public sealed class EFOrderRepository(OrdersDbContext db) : IOrderRepository
     // SQLite's code for a broken unique index; swap it with the provider (e.g. SQL Server 2627/2601).
     private static bool IsUniqueViolation(DbUpdateException e)
         => e.InnerException is SqliteException { SqliteExtendedErrorCode: 2067 };
-
-    public async Task UpdateAsync(Order order)
-    {
-        db.Orders.Update(order);
-        await db.SaveChangesAsync();
-    }
 }

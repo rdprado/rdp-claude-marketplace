@@ -6,7 +6,6 @@ namespace OrdersExample.Tests.Unit.Entities;
 public class OrderTests
 {
     private static readonly DateTime CreatedAt = new(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime Later = new(2026, 1, 15, 12, 5, 0, DateTimeKind.Utc);
 
     [Theory]
     [InlineData(" petr4 ", OrderSide.Buy, 100, "37.5", true)] // the symbol is compared normalized
@@ -28,7 +27,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void Open_WithValidValues_CreatesOpenOrderWithUpperCaseSymbol()
+    public void Open_WithValidValues_CreatesOrderWithUpperCaseSymbol()
     {
         // Arrange
         var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -42,11 +41,7 @@ public class OrderTests
         Assert.Equal(OrderSide.Buy, order.Side);
         Assert.Equal(100, order.Quantity);
         Assert.Equal(37.5m, order.Price);
-        Assert.Equal(OrderStatus.Open, order.Status);
-        Assert.True(order.CanEdit);
-        Assert.True(order.CanCancel);
         Assert.Equal(CreatedAt, order.CreatedAt);
-        Assert.Equal(CreatedAt, order.UpdatedAt);
     }
 
     [Theory]
@@ -64,65 +59,5 @@ public class OrderTests
 
         // Assert
         Assert.ThrowsAny<ArgumentException>(open);
-    }
-
-    [Fact]
-    public void Edit_OpenOrder_ChangesQuantityPriceAndUpdatedAt()
-    {
-        // Arrange
-        var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "VALE3", OrderSide.Sell, 10, 60m, CreatedAt);
-
-        // Act
-        order.Edit(20, 61.25m, Later);
-
-        // Assert
-        Assert.Equal(20, order.Quantity);
-        Assert.Equal(61.25m, order.Price);
-        Assert.Equal(Later, order.UpdatedAt);
-        Assert.Equal(CreatedAt, order.CreatedAt);
-    }
-
-    [Fact]
-    public void Edit_CancelledOrder_Throws()
-    {
-        // Arrange
-        var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "VALE3", OrderSide.Sell, 10, 60m, CreatedAt);
-        order.Cancel(Later);
-
-        // Act
-        var edit = () => order.Edit(20, 61m, Later);
-
-        // Assert
-        Assert.Throws<InvalidOperationException>(edit);
-    }
-
-    [Fact]
-    public void Cancel_OpenOrder_IsCancelledAndCanNoLongerBeEditedOrCancelled()
-    {
-        // Arrange
-        var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "VALE3", OrderSide.Sell, 10, 60m, CreatedAt);
-
-        // Act
-        order.Cancel(Later);
-
-        // Assert
-        Assert.Equal(OrderStatus.Cancelled, order.Status);
-        Assert.False(order.CanEdit);
-        Assert.False(order.CanCancel);
-        Assert.Equal(Later, order.UpdatedAt);
-    }
-
-    [Fact]
-    public void Cancel_CancelledOrder_Throws()
-    {
-        // Arrange
-        var order = Order.Open(Guid.NewGuid(), Guid.NewGuid(), "VALE3", OrderSide.Sell, 10, 60m, CreatedAt);
-        order.Cancel(Later);
-
-        // Act
-        var cancelAgain = () => order.Cancel(Later);
-
-        // Assert
-        Assert.Throws<InvalidOperationException>(cancelAgain);
     }
 }

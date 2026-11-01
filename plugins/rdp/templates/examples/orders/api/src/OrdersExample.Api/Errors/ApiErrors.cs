@@ -21,7 +21,6 @@ public static class ApiErrors
         OutputStatus status, string code, IReadOnlyDictionary<string, string>? fields = null) => status switch
         {
             OutputStatus.Validation => Of(StatusCodes.Status400BadRequest, code, fields),
-            OutputStatus.NotFound => Of(StatusCodes.Status404NotFound, code),
             OutputStatus.Conflict => Of(StatusCodes.Status409Conflict, code),
             _ => Of(StatusCodes.Status500InternalServerError, ErrorCodes.Unexpected),
         };
