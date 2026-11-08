@@ -44,7 +44,7 @@ Merge feature/fix branches into `main`. Delete the branch after merge.
 
 ## Branch names and GitHub issues
 
-Every branch name carries the GitHub issue number, e.g. `feature/1234-order-status-webhook`. GitHub links commits and PRs to the issue by `#1234` in their text — `/rdp:implement` relies on it. For work without an issue, ask whether to create one before branching.
+Every branch name carries the GitHub issue number, e.g. `feature/1234-order-status-webhook`. GitHub links commits and PRs to the issue by `#1234` in their text. For work without an issue, ask whether to create one before branching.
 
 ## Pushing and opening PRs (Bitbucket)
 
@@ -89,6 +89,7 @@ When a work is complete suggest opening one or multiple PRs. Ideally a PR should
 
 ## Don't
 
+- Never run `svn commit` (or `svn ci`). In SVN projects only the developer commits.
 - Don't commit directly to `main` (or to a `release/X.Y.x` branch under Flow A).
 - Don't `git push --force` to anything but your own feature branch — and prefer `--force-with-lease`.
 - Don't merge a PR with failing CI.

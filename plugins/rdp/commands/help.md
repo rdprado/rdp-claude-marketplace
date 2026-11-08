@@ -16,7 +16,7 @@ out of date" and offer to update it (then it must be committed). Then ask in one
 
 ┌─ Commands, in order ───────────────────────────────────────────────┐
 │                                                                    │
-│ 0  /rdp:setup-repo              once per project: helps you write or    │
+│ 0  /rdp:setup-repo         once per project: helps you write or    │
 │                            update CLAUDE.md with the RDP AI        │
 │                            standards                               │
 │                                                                    │
@@ -24,19 +24,21 @@ out of date" and offer to update it (then it must be committed). Then ask in one
 │                            three-item checklist (Implementação,    │
 │                            Testes, Deploy)                         │
 │                                                                    │
-│ 2  /rdp:implement <#n>...  implement one or more stories in        │
-│                            parallel, one PR each (--pair = step    │
-│                            by step)                                │
+│ 2  /rdp:pickup <#n>        start an issue: assignee, in progress,  │
+│                            branch (or SVN revision), comment       │
+│                                                                    │
+│ 3  /rdp:wrap <#n>          after the PR: review status, PR link,   │
+│                            summary comment (never closes it)       │
 │                                                                    │
 ├─ How it flows ─────────────────────────────────────────────────────┤
 │                                                                    │
 │ idea → /rdp:story → GitHub issue with its three-item checklist,    │
-│        you approve it                                              │
-│ → /rdp:implement → one PR per story, tests first, one OK before    │
-│        anything is committed or pushed                             │
-│ → you approve the PR → the issue gets the ready-for-test label     │
+│        you approve it → /rdp:pickup                                │
+│ → you implement it with the AI (the skills load on their own) →    │
+│        before each push the docs are checked (update-docs) → PR    │
+│ → /rdp:wrap                                                        │
 │                                                                    │
-│ At any step you can say: approve, why?, stop, skip Sonar this time │
+│ At any step you can say: approve, why?, stop                       │
 ├─ Where things live ────────────────────────────────────────────────┤
 │                                                                    │
 │ Tasks, plans, status    →  GitHub issues (titles start with [tag]) │

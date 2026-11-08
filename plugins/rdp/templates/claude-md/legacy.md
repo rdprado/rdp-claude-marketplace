@@ -5,11 +5,11 @@
      never put absolute paths in it. When running /init, keep the RDP block and
      the "Project profile" block, and fill in the skeleton below them.
      Required: "Project profile" (the RDP commands read it). Every other section
-     is optional: delete what doesn't apply (e.g. Sonar or Git flow in a project
+     is optional: delete what doesn't apply (e.g. Git flow in a project
      with no git/CI) or write "N/A" in its line. -->
 
 <!-- RDP block — written by /rdp:setup-repo, refreshed by the RDP commands. -->
-Before writing, reviewing, testing or designing code, load the `rdp-mode` skill and the RDP skills its table lists for the task. Skip its clean architecture rules. Tests are not required; any test you add follows `rdp-mode` → "Tests".
+Before writing, reviewing, testing or designing code, load the `rdp-mode-legacy` skill (not `rdp-mode`) and the RDP skills its table lists for the task.
 <!-- end RDP block -->
 
 ## Project profile
@@ -22,14 +22,9 @@ Before writing, reviewing, testing or designing code, load the `rdp-mode` skill 
 - GitHub repo: `<owner/repo>` — tag `[<Project>]` (every issue title starts with it); labels and milestones are read from GitHub.
 - Docs: <path to this project's intro in docs/>
 
+- Sonar: none (legacy)
+
 For new code, follow "Guidelines for new code" below.
-
-## Sonar (.NET)
-
-How to run it and set it up: the `sonar` skill.
-
-- Official project key: `<sonar-project-key | none (an experiment that will never ship)>`
-- Base branch for "new from this work": `<main | release/X.Y.x>`
 
 ## The pattern for huge legacy projects
 

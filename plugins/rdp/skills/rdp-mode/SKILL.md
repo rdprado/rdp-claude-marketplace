@@ -1,6 +1,6 @@
 ---
 name: rdp-mode
-description: "RDP main rules for every code change: make it work, make it right, practice; clean architecture layers, errors, logging, and the orders example. Use when writing, reviewing or fixing code."
+description: "RDP main rules for every code change: make it work, make it right, practice; clean architecture layers, errors, logging, and the orders example. Use when writing, reviewing or fixing code. Not for legacy projects (CLAUDE.md says Legacy: YES): those use rdp-mode-legacy."
 ---
 
 # rdp-mode
@@ -25,6 +25,7 @@ If the project's `CLAUDE.md` says otherwise, the project wins. Before a task, lo
 | Sonar: running it, its setup, its result               | `sonar`           | —                               |
 | CI/CD YAML, `ci/` scripts, deploys, pipeline secrets   | `pipelines`       | `pipelines`                     |
 | Commits, branches, PRs                                 | `git-flow`        | `git-flow`                      |
+| Pushing a branch, documenting a project in docs/       | `update-docs`     | `update-docs`                   |
 | GitHub issues, docs/ pages                             | `github-issues`   | `github-issues`                 |
 | Business logic, a use case, a feature, a product decision | `product-manager` | `product-manager`            |
 
@@ -283,5 +284,5 @@ Write in `.claude/tmp/log-<task>.md` the final numbers of both.
 
 ## RDP
 
-* New story: suggest `/rdp:story`; implement story issues with `/rdp:implement <#n> [<#n> ...]`; `/rdp:help` lists the commands.
+* New story: suggest `/rdp:story`; `/rdp:help` lists the commands.
 * GitHub issues are the source of truth for plans and status; never keep them in local files. Load `github-issues` for GitHub issue or docs/ work.

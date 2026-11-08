@@ -16,7 +16,7 @@ Before writing, reviewing, testing or designing code, load the `rdp-mode` skill 
 ## Project profile
 
 - Stack: <.NET 8 / TypeScript + React Native / …>
-- Template: <ASP.NET Core back end / Svelte + BFF / Svelte + BFF + ASP.NET Core back end / N/A>
+- Template: <WinForms (Passive View) / ASP.NET Core back end / Svelte + BFF / Svelte + BFF + ASP.NET Core back end / N/A>
 - Uses clean architecture: YES
 - Legacy: NO
 - Git flow: B (GitHub Flow) — see the `git-flow` skill. Switch to A only if the project ships parallel versioned releases.

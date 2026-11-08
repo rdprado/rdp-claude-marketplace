@@ -89,11 +89,24 @@ test('git commit needs git-flow; other shell commands pass', () => {
   assert.equal(denied(dir, session, 'Bash', { command: 'git commit -m "x"' }), null);
 });
 
-test('git push needs git-flow', () => {
+test('svn commit is always refused, even with every skill loaded', () => {
+  const dir = project(LEGACY_CLAUDE_MD);
+  const session = randomUUID();
+  runHook(dir, session, 'Skill', { skill: 'rdp:git-flow' });
+  runHook(dir, session, 'Skill', { skill: 'rdp:update-docs' });
+  assert.match(denied(dir, session, 'Bash', { command: 'svn commit -m "OMNI-1 x"' }), /never run `svn commit`/);
+  assert.match(denied(dir, session, 'PowerShell', { command: 'svn ci -m x' }), /never run `svn commit`/);
+  assert.equal(denied(dir, session, 'Bash', { command: 'svn status' }), null);
+});
+
+test('git push needs git-flow and update-docs', () => {
   const dir = project(RDP_CLAUDE_MD);
   const session = randomUUID();
-  assert.match(denied(dir, session, 'Bash', { command: 'git push origin feature/TESTE-1-x' }), /rdp:git-flow/);
   runHook(dir, session, 'Skill', { skill: 'rdp:git-flow' });
+  const reason = denied(dir, session, 'Bash', { command: 'git push origin feature/TESTE-1-x' });
+  assert.match(reason, /rdp:update-docs/);
+  assert.doesNotMatch(reason, /git-flow/);
+  runHook(dir, session, 'Skill', { skill: 'rdp:update-docs' });
   assert.equal(denied(dir, session, 'Bash', { command: 'git push origin feature/TESTE-1-x' }), null);
 });
 
@@ -103,9 +116,12 @@ test('markdown and other files pass', () => {
   assert.equal(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/web/package.json` }), null);
 });
 
-test('legacy projects need rdp-mode too', () => {
+test('legacy projects need rdp-mode-legacy, not rdp-mode', () => {
   const dir = project(LEGACY_CLAUDE_MD);
-  assert.match(denied(dir, randomUUID(), 'Write', { file_path: `${dir}/src/Form1.cs` }), /rdp:rdp-mode/);
+  const session = randomUUID();
+  assert.match(denied(dir, session, 'Write', { file_path: `${dir}/src/Form1.cs` }), /`rdp:rdp-mode-legacy`/);
+  runHook(dir, session, 'Skill', { skill: 'rdp:rdp-mode-legacy' });
+  assert.equal(denied(dir, session, 'Write', { file_path: `${dir}/src/Form1.cs` }), null);
 });
 
 test('loading is per session', () => {

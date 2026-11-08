@@ -1,5 +1,5 @@
 ---
-description: Turn a rough idea into a GitHub story issue (what and why) with its three-item checklist — /rdp:implement does the how
+description: Turn a rough idea into a GitHub story issue (what and why) with its three-item checklist
 ---
 Help me turn a rough idea into a story issue in the project's GitHub repo (repo and tag from the
 project `CLAUDE.md` "GitHub repo" line). My first description of the idea may be in $ARGUMENTS. For
@@ -7,8 +7,7 @@ every GitHub issue read or write, follow the `github-issues` skill.
 
 Start every reply with `/rdp:story · step N` (plus the issue number once it exists).
 
-This command covers **what and why**: the problem and the expected outcome, never the implementation
-(that is `/rdp:implement`).
+This command covers **what and why**: the problem and the expected outcome, never the implementation.
 
 0. In 3–4 lines, say what will happen: we talk the idea through, you check the code, the docs and
    existing issues, show me a draft, and create it on GitHub only after my approval.
@@ -70,7 +69,7 @@ This command covers **what and why**: the problem and the expected outcome, neve
    as a `## Checklist` task list (`- [ ]`), never more than three. If I chose the current iteration,
    add the issue to the board and set its iteration. Read it back (`gh issue view`), check it matches
    what I approved, and give me the number.
-9. End with: "Story created. Before you implement it with `/rdp:implement <#n>`, I recommend
+9. End with: "Story created. Before you implement it, I recommend
    clearing the context (`/clear`), so the AI works at its peak; the story is on GitHub, nothing is
    lost."
 

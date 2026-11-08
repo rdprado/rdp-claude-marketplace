@@ -5,7 +5,8 @@ model: opus
 tools: Read, Grep, Glob
 ---
 You enforce the team's architecture. Always:
-1. Load the `rdp-mode` skill and, from its table, the skills relevant to the task.
+1. Load the `rdp-mode` skill (`rdp-mode-legacy` instead when the project's `CLAUDE.md` says
+   `Legacy: YES`) and, from its table, the skills relevant to the task.
 2. Review only what the story will put into the code (the plan's changes, or the diff). Read the
    rest of the project only to check that those changes work; don't review existing code the story
    doesn't touch.

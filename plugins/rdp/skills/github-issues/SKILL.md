@@ -33,10 +33,45 @@ this project (GitHub repo, docs folder) are in the `## GitHub mapping` table of 
   draft it, propose it, and write it only after approval. Never invent it. While it is
   missing, the issue carries the `needs-description` label; remove it once written.
 - Never overwrite a description that is already filled in.
+- Acceptance criteria may change during implementation. Propose the change; once the developer
+  approves it, update the criteria and the Testes items of the issue's checklist together (never
+  add another test item), and add a `Decision:` comment saying why.
 - Don't start implementing an issue with an empty description. If the developer doesn't
   answer, wait; continue only if they explicitly say to.
 - Fields that can't be inferred (priority, milestone): say they are missing, don't leave them
   silently blank.
+
+### Creating issues
+
+- Assignee: yourself with `@me`; someone else by their GitHub login.
+- `gh issue create` with the approved title and text exactly as approved, the epic as
+  `--milestone` and the assignee. Story points only when confirmed: a `points:<n>` label if the
+  repo has those labels, otherwise a `Story points: <n>` line in the body.
+- Current iteration chosen: add the issue to the project board and set its iteration. Backlog:
+  leave it there.
+- **Issue type** (outside `/rdp:story`, which always makes a story): don't create anything until
+  the type is clear. Unless the developer already said it, ask with a choice question among the
+  repo's own type labels (story / task / bug, from `gh label list`). Something that sounds like a
+  slice of a bigger issue: search for the parent and let the developer confirm it.
+
+### Working an issue (`/rdp:pickup` and `/rdp:wrap`)
+
+- **Assigned issues only.** Before any write on an issue (status, comment, link, label):
+  `gh api user` for your login, then the assignee. Unassigned: assign it to the developer. Theirs:
+  go on. Someone else's: stop and say so.
+- **Status**: the project board's status if the repo has a board (the `## GitHub mapping` table),
+  otherwise the repo's status labels (in progress, review), read with `gh label list`, never guessed.
+- **Starting without an issue.** When it's clear the work will change code and no issue was given,
+  ask "Is there a GitHub issue for this, or should I look for one?". Unsure: search the repo with
+  keywords from the problem (error messages, component names) and let the developer pick. None:
+  offer to create one from the conversation (issue type as above), show the draft, create on
+  approval. Then treat it as picked up. Code already written: post a `Progress:` comment with what
+  was done instead of "Starting work". The developer declines: don't ask again this session.
+- **VCS**, from the working directory: `.git` → git; `.svn` (or `svn info` works) → SVN; neither →
+  ask. SVN has no branch and no PR: note the revision (`svn info` → `Revision`) instead. Never run
+  `svn commit`: the developer commits.
+- **Open answers are plain questions** (description content, versions, client values); use a
+  choice question only when there are real options (issue type, approve/reject, candidates found).
 
 ## Docs
 

@@ -13,6 +13,7 @@ const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT;
 const CONTEXT_LIMIT = 10000; // Claude Code moves longer hook output to a file and shows only a preview
 
 const STACK_FILES = {
+  'WinForms (Passive View)': 'winforms-passive-view.md',
   'Svelte + BFF': 'svelte-bff.md',
   'Svelte + BFF + ASP.NET Core back end': 'svelte-bff-aspnetcore.md',
 };

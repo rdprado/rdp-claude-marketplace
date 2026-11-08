@@ -55,25 +55,28 @@ Set up this project with the RDP AI standards.
      Which template?
      1. Legacy (WinForms, .NET Framework, old ASP.NET, …)
      Modern
-       2. ASP.NET Core back end
-       3. Svelte + BFF
-       4. Svelte + BFF + ASP.NET Core back end
-     5. Other (describe it)
+       2. WinForms (Passive View)
+       3. ASP.NET Core back end
+       4. Svelte + BFF
+       5. Svelte + BFF + ASP.NET Core back end
+     6. Other (describe it)
      ```
      Before the menu, say what the files show and suggest a number: a `net4x` `.csproj` → 1;
-     `Microsoft.NET.Sdk.Web` → 2; `@sveltejs/kit` in `package.json` → 3, or 4 if there's also a
+     a WinForms project that already has `IXxxView` interfaces and controllers → 2;
+     `Microsoft.NET.Sdk.Web` → 3; `@sveltejs/kit` in `package.json` → 4, or 5 if there's also a
      `Microsoft.NET.Sdk.Web` project. An empty folder is a new project: no suggestion.
      The number sets legacy/modern and the stack, and picks the files for step 3 under
      `${CLAUDE_PLUGIN_ROOT}/templates/claude-md/`:
      | # | Base | Stack file |
      |---|---|---|
-     | 1 | `legacy.md` | — (ask the stack, as in 5) |
-     | 2 | `modern/base.md` | — (Stack: `.NET <version> + ASP.NET Core`; the base already covers it) |
-     | 3 | `modern/base.md` | `modern/svelte-bff.md` |
-     | 4 | `modern/base.md` | `modern/svelte-bff-aspnetcore.md` |
-     For 5, ask the developer to describe the stack in one line, then ask the two questions
+     | 1 | `legacy.md` | — (ask the stack, as in 6) |
+     | 2 | `modern/base.md` | `modern/winforms-passive-view.md` |
+     | 3 | `modern/base.md` | — (Stack: `.NET <version> + ASP.NET Core`; the base already covers it) |
+     | 4 | `modern/base.md` | `modern/svelte-bff.md` |
+     | 5 | `modern/base.md` | `modern/svelte-bff-aspnetcore.md` |
+     For 6, ask the developer to describe the stack in one line, then ask the two questions
      below (modern or legacy, stack) and use no stack file.
-   - Only for 5 — modern or legacy. Modern is the default; legacy is the exception. Explain in one
+   - Only for 6 — modern or legacy. Modern is the default; legacy is the exception. Explain in one
      line: modern = .NET (Core / 5+) or TypeScript apps that follow clean architecture;
      legacy = old code with no clean architecture and little test coverage, e.g. .NET
      Framework 4.x, WinForms, old ASP.NET. Say what the project files show
@@ -82,7 +85,7 @@ Set up this project with the RDP AI standards.
      `n` = legacy. If the files point to legacy, say so before the question, so the
      developer can answer `n`. If the folder has no project files yet, say it is a new
      project, and a new project is modern.
-   - Only for 1 and 5 — stack: .NET, TypeScript/JavaScript, or both. Detect it (`.csproj` → .NET;
+   - Only for 1 and 6 — stack: .NET, TypeScript/JavaScript, or both. Detect it (`.csproj` → .NET;
      `tsconfig.json` or `package.json` → TypeScript/JavaScript) and say what you found.
      If the folder has no project files yet, ask.
    - GitHub repo (`owner/repo`). Detect it with `gh repo view --json nameWithOwner`
@@ -100,7 +103,7 @@ Set up this project with the RDP AI standards.
    - `Stack:` line → the file's first line (ask for `<version>`, suggest the latest LTS).
    - `<App>` in the Layout → the app name, in PascalCase (ask; suggest it from the folder
      name, e.g. `market-place-experimentation` → `MarketPlaceExperimentation`).
-   - `Template:` line → the menu name (e.g. `Svelte + BFF`); `N/A` for 5.
+   - `Template:` line → the menu name (e.g. `Svelte + BFF`); `N/A` for 6.
    - Its `## Template: …` section (and `## Layout`, when it has one) → right after the
      Project profile.
    - Its `Build:` commands → replace the build placeholders.
@@ -116,7 +119,7 @@ Set up this project with the RDP AI standards.
    RDP block at the top, missing sections below it, leaving everything already
    there untouched. If something there contradicts the RDP rules (e.g. plans
    kept in a local file, a task journal), point it out and let me decide.
-4. RDP rules. They are the `rdp-mode` skill now; nothing is copied into the project. If
+4. RDP rules. They are the `rdp-mode` skill now (`rdp-mode-legacy` for legacy projects); nothing is copied into the project. If
    `.claude/rdp-standards.md` exists or the RDP block imports it (`@.claude/rdp-standards.md`),
    say it is an old copy of the rules and ask before deleting the file and that line. If the
    RDP block differs from the template, say "The RDP block in this project is out of date",
@@ -164,7 +167,8 @@ Set up this project with the RDP AI standards.
        (complexity only; CRAP shows N/A).
      - Show the 10 closest dryer pairs and the 10 worst crapper functions. Say it's the
        starting point, not errors to fix now. Don't refactor during setup.
-   Sonar (only if the stack includes .NET): follow the `sonar` skill → "Ready to run", in its order (the key
+   Sonar (only if the stack includes .NET and the project is not legacy; legacy keeps the
+   template's `Sonar: none (legacy)`): follow the `sonar` skill → "Ready to run", in its order (the key
    first, then the machine), and fill the "Sonar (.NET)" section. Add `.sonarqube/` to the `.gitignore`
    (the script writes its work and report there).
 6. GitHub mapping. Skip it if `CLAUDE.md` already has a `## GitHub mapping`
