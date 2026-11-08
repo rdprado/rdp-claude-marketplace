@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Infrastructure;
 
 /// <summary>
 /// A Serilog sink that keeps the events in memory, so tests check their properties instead of the log text.

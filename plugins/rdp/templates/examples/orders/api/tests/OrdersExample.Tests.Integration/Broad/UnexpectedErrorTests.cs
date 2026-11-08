@@ -5,9 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrdersExample.Application.Repositories;
 using OrdersExample.Entities;
+using OrdersExample.Tests.Integration.Infrastructure;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Broad;
 
+// Broad integration test: an unexpected exception gives a 500 without its text, and the audit log still records the request.
 public class UnexpectedErrorTests(UnexpectedErrorTests.BrokenDatabaseFactory factory)
     : IClassFixture<UnexpectedErrorTests.BrokenDatabaseFactory>
 {

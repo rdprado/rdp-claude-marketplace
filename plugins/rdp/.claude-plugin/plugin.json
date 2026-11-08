@@ -1,7 +1,7 @@
 {
   "name": "rdp",
   "description": "RDP AI standards: the rdp-mode skill (main rules) and the on-demand skills; /rdp:setup-repo and every RDP command keep each project's CLAUDE.md current.",
-  "version": "2.16.15",
+  "version": "2.18.0",
   "author": {
     "name": "RDP Engineering"
   }

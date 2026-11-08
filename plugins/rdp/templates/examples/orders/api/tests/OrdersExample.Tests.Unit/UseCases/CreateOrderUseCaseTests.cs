@@ -9,6 +9,8 @@ using OrdersExample.Infrastructure.Ids;
 
 namespace OrdersExample.Tests.Unit.UseCases;
 
+// Unit test: one class, every port mocked (repository, id generator) and a fixed clock. No database, HTTP
+// or files. Value variations go here (the validator has its own [Theory]), not in the integration tests.
 public class CreateOrderUseCaseTests
 {
     private static readonly DateTimeOffset Now = new(2026, 1, 15, 12, 0, 0, TimeSpan.Zero);

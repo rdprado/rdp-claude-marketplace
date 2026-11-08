@@ -1,10 +1,11 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 using System.Net;
 using System.Text;
+using OrdersExample.Tests.Integration.Infrastructure;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Broad;
 
-// What ASP.NET Core answers on its own still comes in the one error shape.
+// Broad integration test: what ASP.NET Core answers on its own still comes in the one error shape.
 public class ErrorShapeTests(TestWebApplicationFactory factory) : IClassFixture<TestWebApplicationFactory>
 {
     [Fact]

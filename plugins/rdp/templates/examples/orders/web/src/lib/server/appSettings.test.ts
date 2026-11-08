@@ -2,14 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  LOCAL_DEV_SESSION_SECRET,
-  loadAppSettings,
-  readFromConfigFolder,
-  type ReadConfigFile
-} from './appSettings.ts';
-
-const REAL_SECRET = 'hml-secret-from-the-environment-file-0123456789';
+import { loadAppSettings, readFromConfigFolder, type ReadConfigFile } from './appSettings.ts';
 
 // The committed files, read from web/config/ (Vitest runs in web/).
 const committedFiles: ReadConfigFile = (fileName) =>
@@ -25,8 +18,7 @@ const LOCAL = {
   IdentityProvider: {
     Url: 'http://localhost:5180/dev-idp',
     RedirectUri: 'http://localhost:5173/auth/callback'
-  },
-  Session: { Secret: LOCAL_DEV_SESSION_SECRET }
+  }
 };
 
 function errorOf(action: () => unknown): string {
@@ -47,32 +39,16 @@ describe('loadAppSettings', () => {
     expect(settings).toEqual({
       apiUrl: 'http://localhost:5180',
       idpUrl: 'http://localhost:5180/dev-idp',
-      authRedirectUri: 'http://localhost:5173/auth/callback',
-      sessionSecret: LOCAL_DEV_SESSION_SECRET
+      authRedirectUri: 'http://localhost:5173/auth/callback'
     });
   });
 
-  it('loads the HML file once Session__Secret comes from the environment', () => {
+  it('loads the HML file when APP_ENV is HML', () => {
     // Act
-    const settings = loadAppSettings({ APP_ENV: 'HML', Session__Secret: REAL_SECRET }, committedFiles);
+    const settings = loadAppSettings({ APP_ENV: 'HML' }, committedFiles);
 
     // Assert
     expect(settings.apiUrl).toBe('https://orders-api.hml.example.com');
-    expect(settings.sessionSecret).toBe(REAL_SECRET);
-  });
-
-  it('refuses to start in HML with the committed empty secret', () => {
-    // Act / Assert
-    expect(() => loadAppSettings({ APP_ENV: 'HML' }, committedFiles)).toThrow(
-      'Invalid configuration (config/appsettings.HML.json + environment): Session:Secret is missing'
-    );
-  });
-
-  it('refuses to start in HML with the local development secret', () => {
-    // Act / Assert
-    expect(() =>
-      loadAppSettings({ APP_ENV: 'HML', Session__Secret: LOCAL_DEV_SESSION_SECRET }, committedFiles)
-    ).toThrow('Session:Secret is the public local development value');
   });
 
   it('lets an environment variable win over the file', () => {
@@ -101,44 +77,20 @@ describe('loadAppSettings', () => {
 
   it('names every missing key', () => {
     // Act / Assert
-    expect(() => loadAppSettings({}, fileWith({ Session: { Secret: LOCAL_DEV_SESSION_SECRET } }))).toThrow(
+    expect(() => loadAppSettings({}, fileWith({}))).toThrow(
       'Api:Url is missing; IdentityProvider:Url is missing; IdentityProvider:RedirectUri is missing'
     );
   });
 
-  it('refuses a secret shorter than 32 characters without printing it', () => {
-    // Arrange
-    const shortSecret = 'short-secret-value';
-
-    // Act
-    const message = errorOf(() => loadAppSettings({ Session__Secret: shortSecret }, fileWith(LOCAL)));
-
-    // Assert
-    expect(message).toContain('Session:Secret must be at least 32 characters');
-    expect(message).not.toContain(shortSecret);
-  });
-
-  it('accepts a secret of exactly 32 characters', () => {
-    // Arrange
-    const secret = 'x'.repeat(32);
-
-    // Act
-    const settings = loadAppSettings({ Session__Secret: secret }, fileWith(LOCAL));
-
-    // Assert
-    expect(settings.sessionSecret).toBe(secret);
-  });
-
-  it('never prints the secret, even when the file is not valid JSON', () => {
+  it('names only the file, not its text, when the file is not valid JSON', () => {
     // Arrange: JSON.parse's own message would quote this text
-    const broken: ReadConfigFile = () => `{ "Session": { "Secret": "${REAL_SECRET}" `;
+    const broken: ReadConfigFile = () => '{ "Api": { "Url": "http://text-from-the-file" ';
 
     // Act
     const message = errorOf(() => loadAppSettings({ APP_ENV: 'PRD' }, broken));
 
     // Assert
     expect(message).toBe('config/appsettings.PRD.json is not a JSON object');
-    expect(message).not.toContain(REAL_SECRET);
   });
 
   it('refuses an APP_ENV other than HML or PRD', () => {

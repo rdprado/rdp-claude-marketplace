@@ -4,9 +4,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using OrdersExample.Tests.Integration.Infrastructure;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Broad;
 
+// Broad integration test: what the API answers without a token or with a rejected one, and that the dev
+// identity provider is not there outside Development.
 public class AuthenticationTests(TestWebApplicationFactory factory) : IClassFixture<TestWebApplicationFactory>
 {
     private const string UnauthorizedBody = """{"error":{"code":"unauthorized"}}""";

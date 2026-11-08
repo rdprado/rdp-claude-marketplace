@@ -4,9 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using OrdersExample.Entities;
 using OrdersExample.Infrastructure.OrdersRepository;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Narrow;
 
-// The repository against SQLite in-memory. xUnit makes a new instance per test, so each test has its own database.
+// Narrow integration test: one integration point, the class that talks to the database, against SQLite
+// in-memory (real SQL, real EF mapping). No host, no HTTP, no login. xUnit makes a new instance per test,
+// so each test has its own database.
 public sealed class EFOrderRepositoryTests : IDisposable
 {
     private static readonly DateTime CreatedAt = new(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);

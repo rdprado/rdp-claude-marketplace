@@ -1,15 +1,15 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
-// Layer: Interface Adapters — entry: every /api/* request, any method, goes to the ApiProxy.
-// A route (not the hook) so the cookies a token renewal sets reach the browser.
-import { RouteTemplate } from '#bff/RouteTemplate.ts';
+// BFF entry: every /api/* request, any method, goes to the API proxy.
+// A route (not the hook) so the cookie a failed renewal clears reaches the browser.
+import { routeTemplate } from '#bff/observability.ts';
 import type { RequestHandler } from './$types';
 
 export const fallback: RequestHandler = async ({ cookies, locals, request, route, url }) => {
-  const reply = await locals.bff.apiProxy.forward(
+  const reply = await locals.api.forward(
     {
       method: request.method,
       pathAndQuery: url.pathname + url.search,
-      route: RouteTemplate.of(route.id, url.pathname),
+      route: routeTemplate(route.id, url.pathname),
       contentType: request.headers.get('content-type'),
       accept: request.headers.get('accept'),
       body: request.body === null ? null : await request.arrayBuffer(),

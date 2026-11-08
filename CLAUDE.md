@@ -10,6 +10,9 @@ the `rdp-claude-marketplace` marketplace (`.claude-plugin/marketplace.json`).
 - On-demand rules: `plugins/rdp/skills/`. Commands: `plugins/rdp/commands/`.
   Agents: `plugins/rdp/agents/`.
 
+**Very important: every `SKILL.md` stays under ~19k characters (~5k tokens)**; after `/compact` only the
+first 5k tokens of each skill come back. Most important rules at the top.
+
 After changing anything under `plugins/rdp/`, suggest bumping `version` in
 `plugins/rdp/.claude-plugin/plugin.json`: without a new version, installs
 don't get the change.

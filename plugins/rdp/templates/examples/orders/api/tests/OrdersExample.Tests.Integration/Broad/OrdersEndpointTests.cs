@@ -3,9 +3,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using OrdersExample.Tests.Integration.Infrastructure;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Broad;
 
+// Broad integration test: the whole API in-process, driven over HTTP the way a client drives it, with a
+// test token and every outside system faked (TestWebApplicationFactory). Only the main flows: the field
+// rules are covered by the validator's unit tests, the SQL by the narrow repository tests.
 public class OrdersEndpointTests(TestWebApplicationFactory factory) : IClassFixture<TestWebApplicationFactory>
 {
     private const string Orders = "/api/v1/orders";

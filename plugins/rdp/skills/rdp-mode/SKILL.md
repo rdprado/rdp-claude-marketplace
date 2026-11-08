@@ -125,7 +125,7 @@ hold rules written nowhere else, so treat the code as part of these rules.
 
 ### Boundary Discipline
 
-* Check the data where it enters.
+* Check the data where it enters: type and shape only. Don't add limits or business rules there; if the system behind it validates, pass it through.
 * Inside, trust it.
 * Keep the business logic in a pure function.
 * Prefer constructor / parameter injection over static state or globals.
@@ -165,10 +165,16 @@ hold rules written nowhere else, so treat the code as part of these rules.
 * Ask developer to review your tests. Fake only boundaries, never the unit under test.
 * `// Arrange // Act // Assert` in every test. Make the SUT clear.
 * No skipped "broken" tests, never catch an error to go green.
-* Unit tests: fast (no sleeps, preferably no loops; fake threads and timers); no real I/O; never unit-test a class that touches UI, database, HTTP or files (it sits behind an interface; test the logic around it).
-* Integration tests: no real database server, network or external service; Docker if needed; parallel with no shared state. In C#: `WebApplicationFactory`, SQLite in-memory (not EF InMemory) reset per test.
+* Test levels (Ham Vocke, *The Practical Test Pyramid*). Put each test at the lowest level that can catch the problem:
+  1. **Unit**: one class, everything else mocked. Fast (no sleeps, fake timers), no real I/O. Value variations go here; mutation and CRAP run on these. A class that touches UI, database, HTTP or files gets no unit test (test the logic around it).
+  2. **Narrow integration**: the one class that talks to an outside system, against a fake of it (the repository against SQLite in-memory). No host, no login.
+  3. **Broad integration**: the whole app in-process, called the way a client calls it, with a test login and every outside system faked. Main flows only.
+  4. **Contract**: only when another team's app calls this one.
+  5. **End-to-end**: the deployed HML, after the deploy, never on a PR. PRD: a read-only smoke check at most.
+  * **Subcutaneous** (only with a UI): the ViewModel with the backend faked.
+* Integration tests (2 and 3): never a real outside system or the local `appsettings.json`; Docker if needed; parallel, no shared state. When a fake differs from the real system, fix the fake.
 * If TypeScript: Vitest (Svelte) or Jest (React Native), `it.each`; `describe` = the unit, `it` = the scenario; fake clock and timers; no faker; fakes implement the port (no `any`, no casts). ViewModels are the main target: `new` with fake ports, check `vm.state`, `dispose()` stops what it started; views have no test.
-* If C#: xUnit + Moq + `Assert.*`, `FakeTimeProvider`; no FluentAssertions, Shouldly, NSubstitute, Bogus or AutoFixture. `Tests.Unit` and `Tests.Integration`; `Method_Scenario_Expected`, `[Theory]`.
+* If C#: xUnit + Moq + `Assert.*`, `FakeTimeProvider`; no FluentAssertions, Shouldly, NSubstitute, Bogus or AutoFixture. `Tests.Unit`, `Tests.Integration/Narrow` and `/Broad` (the shared test host and fakes in `Infrastructure/`); `WebApplicationFactory`, SQLite in-memory (not EF InMemory) reset per test; `Method_Scenario_Expected`, `[Theory]`.
 * For reference, see the orders example's tests.
 
 ## Code style
@@ -249,8 +255,8 @@ Write in `.claude/tmp/log-<task>.md` the final numbers of both.
 
 * Keep a log of every action you take and the reason you took it, in `.claude/tmp/log-<task>.md`.
 * When you start and finish each part, run `date` and write its time in the log.
-* Write each decision the request didn't settle, e.g. which fields a form has, how a retry avoids
-  a duplicate. Also write anything you built that wasn't asked, e.g. a screen nobody requested.
+* Ask before deciding what the request didn't settle: a rule, a limit, a validation, a behavior.
+  Write the developer's answer in the log. Also write anything you built that wasn't asked.
 * End with what is left open.
 * Report that log upon completion and keep it (`.claude/tmp/` is git-ignored).
 * Dont skip this!
@@ -270,7 +276,8 @@ Write in `.claude/tmp/log-<task>.md` the final numbers of both.
 
 * Unless you are the architect: before each commit, run the `rdp:architect` agent (RDP's review
   agent) on the diff. Give it what was asked and the changed files. Write in
-  `.claude/tmp/log-<task>.md` what it found and what you fixed, or why not.
+  `.claude/tmp/log-<task>.md` what it found and what you fixed, or why not. Fix its bugs and
+  guideline violations; anything that adds a rule, a limit or a behavior goes to the developer first.
 * Commit often, in small ordered commits.
 * Each commit says why, what changed, and how you proved it.
 

@@ -1,34 +1,28 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
-// Layer: Application (tests only) — hand-written fakes of the BFF's ports, shared by its unit tests.
-import { CookieSeal } from '../CookieSeal.ts';
-import { SessionCookie, SignInCookie } from '../SessionCookie.ts';
-import type { Clock } from '../ports/Clock.ts';
-import type { CookieJar, CookieOptions } from '../ports/CookieJar.ts';
-import type { LogFields, Logger } from '../ports/Logger.ts';
+// Tests only: plain fakes of what the BFF modules take as parameters (cookies, clock, logger).
+import type { CookieJar, CookieOptions } from '../auth.ts';
+import type { LogFields, Logger } from '../observability.ts';
 
-export class FakeCookieJar implements CookieJar {
-  readonly values = new Map<string, string>();
-  readonly options = new Map<string, CookieOptions>();
+export type FakeCookieJar = CookieJar & {
+  readonly values: Map<string, string>;
+  readonly options: Map<string, CookieOptions>;
+};
 
-  get(name: string): string | undefined {
-    return this.values.get(name);
-  }
-
-  set(name: string, value: string, options: CookieOptions): void {
-    this.values.set(name, value);
-    this.options.set(name, options);
-  }
-
-  delete(name: string): void {
-    this.values.delete(name);
-  }
-
-  // Copies the cookies, as a second browser request carrying the same cookies would.
-  copy(): FakeCookieJar {
-    const copy = new FakeCookieJar();
-    this.values.forEach((value, name) => copy.values.set(name, value));
-    return copy;
-  }
+export function fakeCookieJar(values: Readonly<Record<string, string>> = {}): FakeCookieJar {
+  const jar = new Map(Object.entries(values));
+  const options = new Map<string, CookieOptions>();
+  return {
+    values: jar,
+    options,
+    get: (name) => jar.get(name),
+    set: (name, value, cookieOptions) => {
+      jar.set(name, value);
+      options.set(name, cookieOptions);
+    },
+    delete: (name) => {
+      jar.delete(name);
+    }
+  };
 }
 
 export type LogEntry = {
@@ -37,40 +31,34 @@ export type LogEntry = {
   readonly fields: LogFields;
 };
 
-export class RecordingLogger implements Logger {
-  readonly entries: LogEntry[] = [];
+export type RecordingLogger = Logger & {
+  readonly entries: LogEntry[];
+  find(event: string): LogEntry | undefined;
+  serialized(): string;
+};
 
-  info(event: string, fields: LogFields = {}): void {
-    this.entries.push({ level: 'info', event, fields });
-  }
-
-  warn(event: string, fields: LogFields = {}): void {
-    this.entries.push({ level: 'warn', event, fields });
-  }
-
-  error(event: string, fields: LogFields = {}): void {
-    this.entries.push({ level: 'error', event, fields });
-  }
-
-  find(event: string): LogEntry | undefined {
-    return this.entries.find((entry) => entry.event === event);
-  }
-
-  serialized(): string {
-    return JSON.stringify(this.entries);
-  }
+export function recordingLogger(): RecordingLogger {
+  const entries: LogEntry[] = [];
+  return {
+    entries,
+    info: (event, fields = {}) => entries.push({ level: 'info', event, fields }),
+    warn: (event, fields = {}) => entries.push({ level: 'warn', event, fields }),
+    error: (event, fields = {}) => entries.push({ level: 'error', event, fields }),
+    find: (event) => entries.find((entry) => entry.event === event),
+    serialized: () => JSON.stringify(entries)
+  };
 }
 
-export class ManualClock implements Clock {
-  constructor(private current: Date) {}
+export type ManualClock = { readonly now: () => Date; advance(ms: number): void };
 
-  now(): Date {
-    return this.current;
-  }
-
-  advance(ms: number): void {
-    this.current = new Date(this.current.getTime() + ms);
-  }
+export function manualClock(start: Date): ManualClock {
+  let current = start;
+  return {
+    now: () => current,
+    advance: (ms) => {
+      current = new Date(current.getTime() + ms);
+    }
+  };
 }
 
 // An unsigned JWT-shaped token with the given `sub`: enough for the BFF, which only reads it for logs.
@@ -78,9 +66,3 @@ export function accessTokenFor(sub: string, marker = 'a'): string {
   const part = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
   return `${part({ alg: 'none' })}.${part({ sub, marker })}.signature`;
 }
-
-// The cookies sealed with a fixed test secret, as the BFF's composition root builds them.
-export const TEST_SECRET = 'test-secret-of-at-least-32-characters';
-export const testSeal = new CookieSeal(TEST_SECRET);
-export const testSessionCookie = new SessionCookie(testSeal);
-export const testSignInCookie = new SignInCookie(testSeal);

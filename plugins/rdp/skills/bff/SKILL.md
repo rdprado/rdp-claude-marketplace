@@ -7,12 +7,13 @@ description: "RDP rules for the BFF (backend for frontend): who holds identity a
 The BFF holds identity and the token, so browser JavaScript never sees it (IETF
 `draft-ietf-oauth-browser-based-apps` §6.1; Duende BFF):
 
-- At sign-in the BFF talks to the identity provider and keeps the token in an HttpOnly + Secure +
-  SameSite cookie. The front never calls the identity provider.
-- The cookie is encrypted (AES-256-GCM, key from a `SESSION_SECRET` env var; or an opaque session id
-  with the tokens kept on the server). Never the token in plain text or base64: DevTools would show it.
-  A tampered cookie counts as no session.
-- On each call the browser sends the cookie; the BFF reads the token from it.
+- At sign-in the BFF talks to the identity provider and keeps the tokens **on the server**. The
+  front never calls the identity provider.
+- The cookie carries only a random session id (HttpOnly + Secure + SameSite), never a token, not
+  even encrypted. An unknown id counts as no session.
+- On each call the browser sends the cookie; the BFF looks the tokens up by the id.
+- Tokens live in the BFF's memory: a restart (each deploy) signs everyone out, and the BFF runs as
+  one instance.
 
 Two valid shapes:
 
@@ -24,7 +25,8 @@ Two valid shapes:
 - **If the API is shared by several clients (mobile, MCP, another front) or deployed separately,
   use a separate BFF** (SvelteKit server, Next.js route handlers). It only does sign-in, the cookie,
   refresh, and proxying to the API with `Authorization: Bearer`. No business logic, no use cases,
-  no per-feature controllers.
+  no per-feature controllers, no validation or limits either: the services behind it own them;
+  the BFF keeps the cookie and the tokens and forwards.
 - If the API returns fast-changing data (e.g. market data over SignalR or WebSocket), proxying it
   through the BFF adds latency and load (IETF §6.1.4.3). Consider the API as the BFF (2-tier), so
   the browser reaches that stream with the cookie, without the extra hop; discuss it with the team
@@ -32,7 +34,14 @@ Two valid shapes:
 
 ## Separate BFF in TypeScript
 
-A separate BFF has no business logic, but it has auth logic. It follows the same rules as the rest of the code: interface + class, constructor injection, the framework only delivers the request.
+A separate BFF is infrastructure: it keeps the cookie and the tokens and forwards. **No use cases,
+no ports, no adapter files, no interface + class pairs.** One module per subject, plus the entry:
+
+- `auth`: sign-in (PKCE), the session store, refresh, sign-out, the CSRF check.
+- One proxy module per upstream (e.g. `api`; `marketData`, `history` when the project has them).
+
+Testable without ports: each module takes what touches the outside world (`fetch`, the clock, the
+logger) as parameters, and the test passes plain fake functions.
 
 ### Entry (thin, per framework)
 
@@ -42,40 +51,51 @@ A separate BFF has no business logic, but it has auth logic. It follows the same
 | Next.js | `middleware.ts` + `app/api/[...path]/route.ts` |
 | Node (Express / Fastify) | middleware + a `/api/*` route |
 
-The entry reads the request, calls one class, and writes the response. No `if` that decides anything.
+The entry reads the request, calls one module function, and writes the response. No `if` that
+decides anything. It builds the modules once per process (the only place with real `fetch`,
+clock and logger).
 
-### Classes (no framework imports)
+### What the modules do (no framework imports)
 
-- `SignIn` — exchanges the code with the identity provider, sets the session cookie.
-- `SessionRefresher` — renews the access token when it expires (refresh token rotates). Requests that
-  arrive together share one renewal; the old cookie is accepted for a few seconds at most (concurrent
-  requests), never longer, or a stolen copy replayed in that window isn't caught as reuse.
-- `SignOut` — revokes the refresh token at the identity provider, clears the cookies.
-- `ApiProxy` — forwards `/api/*` to the API with `Authorization: Bearer`.
+- Sign-in: exchanges the code with the identity provider, stores the tokens, sets the session id cookie.
+- Refresh: renews the access token when it expires (the refresh token rotates). Requests that arrive
+  together share one renewal. When the identity provider refuses the refresh (expired, revoked, a rotated token used again),
+  drop the session.
+- Sign-out: revokes the refresh token at the identity provider, deletes the session, clears the cookie.
+- Proxy: forwards `/api/*` to the API with `Authorization: Bearer`.
 
-Errors: the API's error body (`{ "error": { "code" } }`) passes through unchanged. The BFF's own
-errors use the same shape with its own codes (`session-expired`, `api-unavailable`), never an
-exception or a stack.
+**That is all a BFF does.** Each of these is a question for the developer, never something to add on
+your own, even when it looks safer:
 
-Ports: `IdentityProviderClient`, `ApiClient`, `Clock`. Adapters: `HttpIdentityProviderClient`, `FetchApiClient`.
-Composition root: one per process, in the entry module (e.g. `hooks.server.ts`), the only `new`.
+- timeouts, retries, reconnect loops, waits before shutting down;
+- refreshing before the token expires, or any other timing number;
+- caps (pending sign-ins, sessions, messages, sockets) and cleanup timers;
+- validating or limiting what goes to an upstream: the upstream validates and limits itself;
+- status codes or socket close codes of its own beyond the cases below.
+
+Errors: the BFF doesn't invent status codes. What an upstream answers (API, identity provider, any
+other service), error or not, passes through with its status and body unchanged; never swap it for
+the BFF's own. The BFF answers by itself only when the request never got an answer: no session
+(`session-expired`), wrong origin, upstream down (`api-unavailable`). Same shape
+(`{ "error": { "code" } }`), never an exception or a stack.
 
 ### What to test
 
-Unit tests, with fakes for the ports:
+Unit tests, passing fake `fetch`, clock and logger:
 
-- **Sign-in:** valid code → cookie set with HttpOnly + Secure + SameSite; invalid code → no cookie.
+- **Sign-in:** valid code → session id cookie with HttpOnly + Secure + SameSite, tokens stored;
+  invalid code → no cookie.
 - **Refresh:**
-  - Expired access → renews; new rotated cookie.
-  - Failed refresh → cookie cleared, 401.
+  - Expired access → renews; the stored tokens rotate, the cookie keeps the same id.
+  - Failed refresh → session deleted, cookie cleared, 401.
   - Two concurrent requests → only one renewal.
-- **Logout:** revokes at the identity provider and clears the cookies.
+- **Logout:** revokes at the identity provider, deletes the session and clears the cookie.
 - **Proxy:**
   - Adds the Bearer token; drops the `Cookie` header before calling the API.
   - Passes status and body through unchanged.
   - Only `/api/*` gets through.
 - **Security:**
-  - The token never appears in a response body or header to the browser.
+  - No token in any response body, header or cookie to the browser.
   - A mutating request from another origin is refused (CSRF).
 
 Integration: the real entry against a fake HTTP upstream (identity provider + API).
@@ -90,29 +110,18 @@ before users report them. One `401` is normal (sessions expire); the signal is t
 The logging library is **pino**. RDP hasn't chosen the observability tool (where logs and errors
 end up) yet: pick it per project, with the team; the tool names below are examples.
 
-- Classes log through a `Logger` port (`application/ports/Logger.ts`); the adapter is
-  `PinoLogger` over pino, with `redact` on `token`, `cookie`, `authorization`, `code` as a safety
-  net. Not `console.*` in production: no levels, no redaction.
+- The modules get the logger as a parameter: pino in production, with `redact` on `token`,
+  `cookie`, `authorization`, `code` as a safety net; a fake in tests. Not `console.*` in
+  production: no levels, no redaction.
 - pino writes JSON lines to **stdout**, never to a file. The host collects them (e.g.
   journald under systemd, `docker logs` in a container) and an agent ships them to whatever log
   tool the project uses. The app knows nothing of the destination, so changing the tool touches no
   code.
-- Unexpected errors also go to the project's monitoring tool through the `Monitoring` port, with
-  the stack.
+- Unexpected errors also go to the project's monitoring tool, with the stack.
 - .NET (BFF inside the API): `ILogger<T>` is already the port, with Serilog behind it
   (orders example, `Program.cs`); same stdout path.
 
-```ts
-// application/ports/Logger.ts
-export interface Logger {
-  info(event: string, fields?: Record<string, unknown>): void;
-  warn(event: string, fields?: Record<string, unknown>): void;
-  error(event: string, fields?: Record<string, unknown>): void;
-}
-```
-
-**1. One line per request**, in the entry (`handle` in `hooks.server.ts`), through a `Logger` port,
-structured JSON to stdout:
+**1. One line per request**, in the entry (`handle` in `hooks.server.ts`), structured JSON to stdout:
 
 ```json
 { "event": "request", "method": "GET", "route": "/api/trainees/:email",
@@ -123,13 +132,12 @@ structured JSON to stdout:
 - `upstreamMs` = time spent in the API, so "BFF slow" and "API slow" are told apart.
 - `userId` is the opaque id from the token (`sub`), never an email or name.
 
-**2. Auth events**, logged by the classes that own them:
+**2. Auth events**, logged by the `auth` module:
 
 | Event | Level |
 |---|---|
 | `signin.ok` / `signin.failed` (reason: `invalid_code`, `expired`, `idp_down`) | Info / Warning |
 | `refresh.ok` / `refresh.failed` (reason: `expired`, `revoked`) | Info / Warning |
-| `refresh.reused` — a rotated refresh token used twice: possible theft | Error |
 | `signout` (and whether the revoke worked) | Info |
 | `csrf.rejected` | Warning |
 
@@ -143,7 +151,7 @@ custom header: it's the W3C standard, and .NET (`Activity`) and the common monit
 propagate it.
 
 **5. Alerts** on rates, never on single events: `signin.failed` and `refresh.failed` above normal,
-any `refresh.reused`, `proxy.failed`, `idp.unavailable`.
+`proxy.failed`, `idp.unavailable`.
 
 **Never logged:** tokens, cookies, sign-in codes, emails or other personal data, request and
 response bodies.
@@ -157,8 +165,8 @@ logged: the user already sees them.
 **BFF inside the API (2-tier):** the same events and fields, logged by the API (.NET structured
 logging); the BFF and API lines are one log.
 
-**Tests:** the classes log through the `Logger` port, so a test checks the event and that no token or
-email is in it (e.g. `refresh.reused` logs Error without the token).
+**Tests:** the fake logger records the events, so a test checks the event and that no token or
+email is in it (e.g. `refresh.failed` logs Warning without the token).
 
 ## The front
 

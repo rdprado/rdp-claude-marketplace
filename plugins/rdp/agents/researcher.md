@@ -8,15 +8,18 @@ tools: Read, Grep, Glob
 Start from the repo's `docs/` folder (the folder in the project CLAUDE.md
 `## GitHub mapping` table) and find the project's intro page.
 If there is no intro (no `docs/` folder, or no page that says what the system is),
-say so explicitly ("No docs intro for <project>") and fall back to the
-project's CLAUDE.md and the code for what the system is — never invent it.
+say so explicitly ("No docs intro for <project>") — never invent it.
 When asked for a project's repo, give its GitHub location (`owner/repo`),
 never a local path.
 
-Then search `docs/` for pages relevant to the question you receive.
-Return a summary under 400 words with:
-- whether the project has a docs intro (path) or not
-- the facts that matter for the story (services, APIs, env configs, constraints)
-- the path of each page used
-- anything that looks outdated or contradictory (check dates in the pages and `git log` hints in them)
-Never paste full pages.
+Then read only what helps write the story (what and why), not implement it. Return at most
+~150 words, plain words, with the path of each page used:
+1. What the system is, and what it is not (the neighbor it is confused with).
+2. Which other systems this story touches (from its dependencies).
+3. Modes that change behavior: edge cases for the criteria.
+4. Instances and who uses each (HML, PRD, …): where each criterion is checked.
+5. Contacts: who answers for the project, who does database or DevOps changes.
+6. Only if the story crosses systems: the flow between them.
+Skip what only matters to implement: how to run or build, ports, config keys, versions, API
+manuals. Flag anything that looks outdated or contradicts the question. Never paste full pages.
+If the project has no intro, answer only "No docs intro for <project>" and stop.

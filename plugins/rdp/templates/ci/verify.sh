@@ -36,7 +36,7 @@ SONAR_PROJECT_KEY="<sonar-project-key>"
 # sonar.cs.opencover.reportsPaths in ci/sonar-analysis.properties.
 COVERAGE_DIR="coverage"
 # .NET: lint is off by default — the compiler and Sonar cover code quality.
-# Revisit only if we adopt a shared .editorconfig (pipelines.md -> "Lint").
+# Revisit only if we adopt a shared .editorconfig (pipelines skill -> "One verify script").
 LINT_ENABLED=false
 # Branch this work merges into (Flow B: main; Flow A: the release branch).
 # Override per run with VERIFY_BASE_BRANCH=release/3.13.x.
@@ -474,7 +474,7 @@ require_sonar_config() {
 
   echo "verify: Sonar is not configured. Missing: ${missing[*]}" >&2
   if [[ "${CI:-}" == "true" ]]; then
-    echo "verify: set the missing pipeline variables / runner tools (pipelines.md -> Secrets)." >&2
+    echo "verify: set the missing pipeline variables / runner tools (pipelines skill -> Secrets)." >&2
   else
     cat >&2 <<'SETUP'
 Set up local Sonar once (full steps: the rdp:sonar skill):

@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
-// Integration test of the BFF: the real entry (hooks.server.ts + the /auth and /api routes, with the
-// real adapters and pino) against a fake identity provider and a fake API over real HTTP on localhost.
-// Only SvelteKit's request plumbing is stood in for, by `Browser` below.
+// Broad integration test of the BFF: the whole BFF in-process (hooks.server.ts + the /auth and /api routes,
+// with the real modules, fetch and pino) against a fake identity provider and a fake API over real HTTP on
+// localhost. Only SvelteKit's request plumbing is stood in for, by `Browser` below.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { isRedirect, type RequestEvent } from '@sveltejs/kit';
@@ -242,7 +242,7 @@ describe('BFF entry', () => {
     expect(callback.response.status).toBe(303);
     expect(callback.response.headers.get('location')).toBe('/');
     expect(callback.setCookies.find((c) => c.startsWith('bff_session='))).toMatch(
-      /HttpOnly; Secure; SameSite=lax/
+      /^bff_session=[A-Za-z0-9_-]{43}; Path=\/; HttpOnly; Secure; SameSite=lax$/
     );
     expect(orders.response.status).toBe(200);
     expect(orders.text).toBe('[]');
@@ -295,38 +295,57 @@ describe('BFF entry', () => {
     expect(JSON.parse(sent.text)).toEqual({ error: { code: 'client-order-id-reused' } });
   });
 
-  it('renews an expired token, then logs refresh.reused when the old cookie comes back', async () => {
+  it('renews an expired token on the server: the cookie keeps its id and the API gets the new token', async () => {
     // Arrange
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(START);
     const browser = await signedInBrowser();
-    const stolen = new Map(browser.jar); // a copy of the cookie before the renewal
+    await browser.send('GET', '/api/v1/orders');
+    const before = apiCalls.at(-1)?.headers.authorization;
+    const sessionId = browser.jar.get('bff_session');
     vi.setSystemTime(new Date(START.getTime() + 5 * 60_000));
     clearLogs();
-    await browser.send('GET', '/api/v1/orders'); // renews: the refresh token rotates
-    vi.setSystemTime(new Date(START.getTime() + 5 * 60_000 + 6_000)); // past the 5 s grace
-    const attacker = new Browser();
-    stolen.forEach((value, name) => attacker.jar.set(name, value));
 
     // Act
-    const replay = await attacker.send('GET', '/api/v1/orders');
+    const renewed = await browser.send('GET', '/api/v1/orders');
+    const again = await browser.send('GET', '/api/v1/orders');
 
     // Assert
-    expect(logged('refresh.ok')).toHaveLength(1);
-    expect(replay.response.status).toBe(401);
-    expect(JSON.parse(replay.text)).toEqual({ error: { code: 'session-expired' } });
-    expect(logged('refresh.reused')).toEqual([expect.objectContaining({ level: 'error', userId: USER_ID })]);
+    expect([renewed.response.status, again.response.status]).toEqual([200, 200]);
+    expect(logged('refresh.ok')).toEqual([expect.objectContaining({ level: 'info', userId: USER_ID })]);
+    expect(renewed.setCookies).toEqual([]);
+    expect(browser.jar.get('bff_session')).toBe(sessionId);
+    expect(apiCalls.at(-1)?.headers.authorization).not.toBe(before);
     const logs = logLines.join('\n');
     issuedTokens.forEach((token) => expect(logs).not.toContain(token));
+    issuedTokens.forEach((token) => expect(readableByPageScript(browser)).not.toContain(token));
   });
 
-  it('signs out: revokes the refresh token and clears the session cookie', async () => {
+  it('answers 401 session-expired for an unknown session id', async () => {
+    // Arrange
+    const browser = new Browser();
+    browser.jar.set('bff_session', 'not-a-session-this-bff-made');
+    const callsBefore = apiCalls.length;
+
+    // Act
+    const sent = await browser.send('GET', '/api/v1/orders');
+
+    // Assert
+    expect(sent.response.status).toBe(401);
+    expect(JSON.parse(sent.text)).toEqual({ error: { code: 'session-expired' } });
+    expect(apiCalls.length).toBe(callsBefore);
+  });
+
+  it('signs out: revokes the refresh token and clears the session cookie; a copy of the cookie stops working', async () => {
     // Arrange
     const browser = await signedInBrowser();
+    const copy = new Browser();
+    browser.jar.forEach((value, name) => copy.jar.set(name, value));
     clearLogs();
 
     // Act
     const sent = await browser.send('POST', '/auth/signout', { origin: APP });
+    const copied = await copy.send('GET', '/api/v1/orders');
 
     // Assert
     expect(sent.response.status).toBe(303);
@@ -334,6 +353,7 @@ describe('BFF entry', () => {
     expect(browser.jar.has('bff_session')).toBe(false);
     expect(revokeCalls.at(-1)).toMatch(/^refresh-\d+-opaque$/);
     expect(logged('signout')).toEqual([expect.objectContaining({ revoked: true, userId: USER_ID })]);
+    expect(copied.response.status).toBe(401);
   });
 
   it('logs signin.failed and sets no session when the code is rejected', async () => {

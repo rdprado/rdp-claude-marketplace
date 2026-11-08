@@ -15,7 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using OrdersExample.Infrastructure.OrdersRepository;
 using Serilog.Core;
 
-namespace OrdersExample.Tests.Integration;
+namespace OrdersExample.Tests.Integration.Infrastructure;
 
 /// <summary>
 /// The real app in a "Testing" environment: SQLite in-memory (its own connection per factory, so test
