@@ -166,7 +166,7 @@ def test_a_failed_baseline_does_not_rewrite_metrics(tmp_path):
 
 def test_worker_count_follows_sites_cores_and_the_requested_cap():
     cores = os.cpu_count() or 1
-    assert worker_count(10, None) == min(10, cores)
+    assert worker_count(10, None) == min(2, cores)
     assert worker_count(10, 3) == min(3, cores)
     assert worker_count(2, 8) == min(2, cores)
 

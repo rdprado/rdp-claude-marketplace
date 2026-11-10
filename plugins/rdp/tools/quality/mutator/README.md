@@ -33,7 +33,7 @@ Exit `0` when every executed mutant was killed. Exit `2` when the baseline tests
 
 ## Workers
 
-Mutants of one file run at the same time. The default is one worker per core. `--max-workers` sets the cap. The run uses the smaller of that cap, the number of cores, and the number of selected sites. Files are still taken one at a time.
+Mutants of one file run at the same time. The default is two workers (each one runs the whole test command, and the test runner starts its own processes). `--max-workers` sets the cap. The run uses the smaller of that cap, the number of cores, and the number of selected sites. Files are still taken one at a time.
 
 Each worker is a directory under `target/mutation-workers`. The file being mutated is a private copy. A module that reaches that file through a relative import is copied too, so Node resolves the import to the private copy. The rest of the tree is linked. The original files stay as they are. The overlay is removed when that file's mutants finish.
 

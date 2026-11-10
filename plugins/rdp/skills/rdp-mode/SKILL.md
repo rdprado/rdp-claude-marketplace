@@ -219,9 +219,12 @@ Write in `.claude/tmp/log-<task>.md` the final numbers of both.
 
 ## Mutator (TypeScript/JavaScript only)
 
-* After Crapper, with the same LCOV: `PY -m mutator --changed --use-existing-coverage --test-command "<the
-  project's test command, e.g. npx vitest run>"`. Pass `--test-command` always: on Windows mutator can't
-  start `npm` on its own. Exit 0: every mutant killed; 3: a mutant survived; 2: the tests fail before mutating.
+* After Crapper, with the same LCOV: `PY -m mutator --changed --use-existing-coverage --test-command "<a
+  one-process test command for only the changed files' tests>"`, e.g. `npx vitest run --no-file-parallelism
+  --maxWorkers=1 src/lib/orders` (Jest: `--runInBand <paths>`). Pass `--test-command` always: on Windows
+  mutator can't start `npm` on its own. Exit 0: every mutant killed; 3: a mutant survived; 2: the tests fail before mutating.
+* Each mutator worker (2 by default) runs that command, so never the full suite with its default pool:
+  that is one node process per core per worker. One mutator run at a time, never from parallel agents.
 * Cover the uncovered.
 * Kill each survivor with a test. One you think can't be killed: show in the log why both versions
   behave the same, and ask. That is rare; usually a test is missing.

@@ -74,11 +74,16 @@ CONFIGS = (
 )
 
 
+# Each worker runs the whole test command, and a test runner (Vitest, Jest) starts its own pool
+# of processes per core: one worker per core meant cores x cores node processes.
+DEFAULT_WORKERS = 2
+
+
 def worker_count(site_count: int, requested: int | None) -> int:
-    """The smaller of the sites, the cores, and an explicit --max-workers."""
+    """The smaller of the sites, the cores, and --max-workers (default DEFAULT_WORKERS)."""
 
     processors = os.cpu_count() or 1
-    limit = processors if requested is None else requested
+    limit = DEFAULT_WORKERS if requested is None else requested
     return max(1, min(site_count, processors, limit))
 
 
