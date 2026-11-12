@@ -80,7 +80,8 @@ public class AuthenticationTests(TestWebApplicationFactory factory) : IClassFixt
         var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         // Act
-        var response = await client.GetAsync("/dev-idp/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fcallback");
+        var response = await client.GetAsync(
+            "/dev-idp/authorize?client_id=orders-web&scope=openid&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fcallback");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

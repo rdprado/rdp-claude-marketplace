@@ -2,14 +2,16 @@
 // BFF entry: GET /auth/callback, where the identity provider sends the browser back with the one-time code.
 import { redirect } from '@sveltejs/kit';
 import type { SignInOutcome } from '#bff/auth.ts';
+import { clientIpOf } from '#bff/clientIp.ts';
 import type { RequestHandler } from './$types';
 
 const NEXT_PAGE: Record<SignInOutcome, string> = { 'signed-in': '/', failed: '/signed-out' };
 
-export const GET: RequestHandler = async ({ cookies, locals, url }) => {
+export const GET: RequestHandler = async ({ cookies, getClientAddress, locals, url }) => {
   const outcome = await locals.auth.completeSignIn(
     cookies,
     { code: url.searchParams.get('code'), state: url.searchParams.get('state') },
+    clientIpOf(getClientAddress),
     locals.trace.traceId
   );
   redirect(303, NEXT_PAGE[outcome]);

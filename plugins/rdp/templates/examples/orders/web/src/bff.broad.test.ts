@@ -39,7 +39,7 @@ function issueTokens() {
 }
 
 function identityProvider(form: URLSearchParams, path: string): { status: number; body: object } {
-  if (path === '/dev-idp/revoke') {
+  if (path === '/dev-idp/oauth/revoke') {
     revokeCalls.push(form.get('token') ?? '');
     refreshTokens.set(form.get('token') ?? '', 'revoked');
     return { status: 200, body: {} };
@@ -87,7 +87,7 @@ beforeAll(async () => {
   await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`;
   vi.stubEnv('Api__Url', base);
-  vi.stubEnv('IdentityProvider__Url', `${base}/dev-idp`);
+  vi.stubEnv('IdentityProvider__Authority', `${base}/dev-idp`);
   vi.stubEnv('IdentityProvider__RedirectUri', REDIRECT_URI);
 });
 
@@ -151,6 +151,7 @@ class Browser {
       route: { id: route?.id ?? null },
       params: {},
       locals: {},
+      getClientAddress: () => '127.0.0.1',
       cookies: this.cookies(setCookies)
     } as unknown as RequestEvent;
 

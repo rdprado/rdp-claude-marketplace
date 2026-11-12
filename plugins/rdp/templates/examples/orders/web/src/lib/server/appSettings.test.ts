@@ -16,8 +16,11 @@ function fileWith(settings: object): ReadConfigFile {
 const LOCAL = {
   Api: { Url: 'http://localhost:5180' },
   IdentityProvider: {
-    Url: 'http://localhost:5180/dev-idp',
-    RedirectUri: 'http://localhost:5173/auth/callback'
+    Authority: 'http://localhost:5180/dev-idp',
+    ClientId: 'orders-example-web',
+    Scope: 'openid offline_access orders-example-api',
+    RedirectUri: 'http://localhost:5173/auth/callback',
+    ClientIpHeader: 'X-End-User-IP'
   }
 };
 
@@ -38,29 +41,62 @@ describe('loadAppSettings', () => {
     // Assert
     expect(settings).toEqual({
       apiUrl: 'http://localhost:5180',
-      idpUrl: 'http://localhost:5180/dev-idp',
-      authRedirectUri: 'http://localhost:5173/auth/callback'
+      idpAuthority: 'http://localhost:5180/dev-idp',
+      idpClientId: 'orders-example-web',
+      idpScope: 'openid offline_access orders-example-api',
+      authRedirectUri: 'http://localhost:5173/auth/callback',
+      clientIpHeader: 'X-End-User-IP',
+      idpClientSecret: ''
     });
   });
 
-  it('loads the HML file when APP_ENV is HML', () => {
+  it.each([['HML'], ['PRD']])(
+    'the committed %s file refuses to start until its TODO values and the secret are set',
+    (appEnv) => {
+      // Act
+      const message = errorOf(() => loadAppSettings({ APP_ENV: appEnv }, committedFiles));
+
+      // Assert
+      expect(message).toContain('Api:Url is still a TODO placeholder');
+      expect(message).toContain('IdentityProvider:ClientId is still a TODO placeholder');
+      expect(message).toContain(
+        'IdentityProvider:ClientSecret is missing (set IdentityProvider__ClientSecret)'
+      );
+    }
+  );
+
+  it('loads a deployed file once filled in, with the secret from the environment', () => {
     // Act
-    const settings = loadAppSettings({ APP_ENV: 'HML' }, committedFiles);
+    const settings = loadAppSettings(
+      { APP_ENV: 'HML', IdentityProvider__ClientSecret: 'from-the-environment' },
+      fileWith(LOCAL)
+    );
 
     // Assert
-    expect(settings.apiUrl).toBe('https://orders-api.hml.example.com');
+    expect(settings.idpClientSecret).toBe('from-the-environment');
+  });
+
+  it('never reads the secret from the file', () => {
+    // Act
+    const settings = loadAppSettings(
+      {},
+      fileWith({ ...LOCAL, IdentityProvider: { ...LOCAL.IdentityProvider, ClientSecret: 'in-a-file' } })
+    );
+
+    // Assert
+    expect(settings.idpClientSecret).toBe('');
   });
 
   it('lets an environment variable win over the file', () => {
     // Act
     const settings = loadAppSettings(
-      { Api__Url: 'http://127.0.0.1:9000/', IdentityProvider__Url: 'http://127.0.0.1:9000/idp' },
+      { Api__Url: 'http://127.0.0.1:9000/', IdentityProvider__Authority: 'http://127.0.0.1:9000/idp' },
       fileWith(LOCAL)
     );
 
     // Assert: the trailing slash is dropped
     expect(settings.apiUrl).toBe('http://127.0.0.1:9000');
-    expect(settings.idpUrl).toBe('http://127.0.0.1:9000/idp');
+    expect(settings.idpAuthority).toBe('http://127.0.0.1:9000/idp');
   });
 
   it('an environment variable set but empty still wins, and fails as missing', () => {
@@ -75,10 +111,19 @@ describe('loadAppSettings', () => {
     ).toThrow('IdentityProvider:RedirectUri must be an absolute URL');
   });
 
+  it('refuses a ClientIpHeader that is not an HTTP header name', () => {
+    // Act / Assert
+    expect(() =>
+      loadAppSettings({ IdentityProvider__ClientIpHeader: 'End User IP' }, fileWith(LOCAL))
+    ).toThrow('IdentityProvider:ClientIpHeader must be an HTTP header name');
+  });
+
   it('names every missing key', () => {
     // Act / Assert
     expect(() => loadAppSettings({}, fileWith({}))).toThrow(
-      'Api:Url is missing; IdentityProvider:Url is missing; IdentityProvider:RedirectUri is missing'
+      'Api:Url is missing; IdentityProvider:Authority is missing; IdentityProvider:ClientId is missing; ' +
+        'IdentityProvider:Scope is missing; IdentityProvider:RedirectUri is missing; ' +
+        'IdentityProvider:ClientIpHeader is missing'
     );
   });
 

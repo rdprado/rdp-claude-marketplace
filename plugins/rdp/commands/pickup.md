@@ -10,8 +10,8 @@ Follow the `github-issues` skill ("Working an issue" and "Description"):
 1. Read $ARGUMENTS with its comments (`gh issue view <n> --comments`), and the `docs/` pages linked to it.
 2. Assignee gate. Someone else's issue: stop here.
 3. Mark it in progress: the board's in-progress status if the repo has a project board (from the
-   `## GitHub mapping` table), otherwise the repo's in-progress label (from `gh label list`; ask if
-   none fits).
+   `## GitHub mapping` table), otherwise the repo's in-progress label (from `gh label list`). Neither:
+   skip silently.
 4. VCS. Git: create the branch as the `git-flow` skill names it (`feature/<n>-<short-description>`).
    SVN: no branch; note the current revision.
 5. Comment `Progress: Starting work, branch <branch>` (git) or `Progress: Starting work, rev <N>`

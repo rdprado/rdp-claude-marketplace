@@ -61,6 +61,7 @@ this project (GitHub repo, docs folder) are in the `## GitHub mapping` table of 
   go on. Someone else's: stop and say so.
 - **Status**: the project board's status if the repo has a board (the `## GitHub mapping` table),
   otherwise the repo's status labels (in progress, review), read with `gh label list`, never guessed.
+  Neither exists: skip status silently; never ask about it or create labels.
 - **Starting without an issue.** When it's clear the work will change code and no issue was given,
   ask "Is there a GitHub issue for this, or should I look for one?". Unsure: search the repo with
   keywords from the problem (error messages, component names) and let the developer pick. None:

@@ -113,6 +113,8 @@ hold rules written nowhere else, so treat the code as part of these rules.
   root (`<plugin>` is two folders up from this skill's directory). It copies the stack's example folder
   renamed, with the rule comments. Commit the copy as it is (no architect review: it is the reviewed
   example), so later diffs show only your work. Then cut what the task doesn't need.
+  Never copy it by hand or over existing files (the script refuses; don't work around it). The HML
+  and PRD config files come with `TODO` values the BFF refuses to start with: ask the developer for them.
 * After that, the project's own code is the reference, not the example.
 * Read a file only when you are about to use it.
 * Copy the shape and the rules, not the names: Orders and its fields are placeholders.
@@ -223,8 +225,9 @@ Write in `.claude/tmp/log-<task>.md` the final numbers of both.
   one-process test command for only the changed files' tests>"`, e.g. `npx vitest run --no-file-parallelism
   --maxWorkers=1 src/lib/orders` (Jest: `--runInBand <paths>`). Pass `--test-command` always: on Windows
   mutator can't start `npm` on its own. Exit 0: every mutant killed; 3: a mutant survived; 2: the tests fail before mutating.
-* Each mutator worker (2 by default) runs that command, so never the full suite with its default pool:
-  that is one node process per core per worker. One mutator run at a time, never from parallel agents.
+* Mutator can freeze the PC. To prevent it: one run at a time, never from parallel agents;
+  `--max-workers 3` (each worker runs the test command); that command runs only the tests of the files
+  being mutated, in one process (never the full suite with its default pool); only `--changed` files.
 * Cover the uncovered.
 * Kill each survivor with a test. One you think can't be killed: show in the log why both versions
   behave the same, and ask. That is rare; usually a test is missing.

@@ -52,6 +52,7 @@ function request(overrides: Partial<ProxyRequest> = {}): ProxyRequest {
     body: null,
     traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
     traceId: '0af7651916cd43dd8448eb211c80319c',
+    clientIp: '203.0.113.7',
     ...overrides
   };
 }
@@ -110,7 +111,7 @@ describe('api proxy', () => {
     expect(reply.body).toBeNull();
   });
 
-  it.each([['/apix/v1/orders'], ['/dev-idp/token'], ['/api']])(
+  it.each([['/apix/v1/orders'], ['/dev-idp/oauth/token'], ['/api']])(
     'refuses %s without calling the API',
     async (path) => {
       // Arrange
@@ -127,6 +128,7 @@ describe('api proxy', () => {
 
   it.each([
     [{ kind: 'none' } as const, 401, 'session-expired'],
+    [{ kind: 'ip-changed' } as const, 401, 'ip-changed'],
     [{ kind: 'unavailable' } as const, 503, 'identity-provider-unavailable']
   ])('answers %o with %i %s and does not call the API', async (lookup, status, code) => {
     // Arrange
@@ -139,6 +141,28 @@ describe('api proxy', () => {
     expect(reply.status).toBe(status);
     expect(JSON.parse(text(reply.body) ?? '')).toEqual({ error: { code } });
     expect(api.calls).toEqual([]);
+  });
+
+  it("asks for the session with the browser's IP and the trace id", async () => {
+    // Arrange
+    const asked: unknown[][] = [];
+    const proxy = createApiProxy({
+      apiUrl: API,
+      currentSession: (...args) => {
+        asked.push(args);
+        return Promise.resolve(ACTIVE);
+      },
+      fetch: fakeApi(json('[]')).fetch,
+      now: manualClock(NOW).now,
+      logger: recordingLogger()
+    });
+    const cookies = fakeCookieJar();
+
+    // Act
+    await proxy.forward(request(), cookies);
+
+    // Assert
+    expect(asked).toEqual([[cookies, '203.0.113.7', '0af7651916cd43dd8448eb211c80319c']]);
   });
 
   it('answers 502 api-unavailable and logs proxy.failed when the API is down', async () => {

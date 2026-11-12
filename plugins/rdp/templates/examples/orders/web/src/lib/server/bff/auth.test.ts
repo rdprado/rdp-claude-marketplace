@@ -16,15 +16,28 @@ const ACCESS = accessTokenFor('user-1');
 const OLD_ACCESS = accessTokenFor('user-1', 'old');
 const NEW_ACCESS = accessTokenFor('user-1', 'new');
 const BASE64URL_ID = /^[A-Za-z0-9_-]{43}$/;
+const IP_HEADER = 'X-End-User-IP';
+const CLIENT_ID = 'orders-web';
+const SCOPE = 'openid offline_access orders-api';
+const LOGIN_IP = '203.0.113.7';
+const NEW_IP = '198.51.100.9';
 
 // ---------- A fake identity provider: a fetch that records each call and answers it ----------
 
-type IdpCall = { readonly path: string; readonly form: URLSearchParams };
+type IdpCall = {
+  readonly path: string;
+  readonly form: URLSearchParams;
+  readonly ip: string | null;
+};
 
 function fakeIdentityProvider(answer: (call: IdpCall) => Promise<Response>) {
   const calls: IdpCall[] = [];
   const fetch: Fetch = (url, init) => {
-    const call = { path: new URL(url).pathname, form: new URLSearchParams(String(init.body)) };
+    const call = {
+      path: new URL(url).pathname,
+      form: new URLSearchParams(String(init.body)),
+      ip: new Headers(init.headers).get(IP_HEADER)
+    };
     calls.push(call);
     return answer(call);
   };
@@ -32,7 +45,13 @@ function fakeIdentityProvider(answer: (call: IdpCall) => Promise<Response>) {
 }
 
 const tokens = (accessToken: string, refreshToken: string) => () =>
-  Promise.resolve(Response.json({ access_token: accessToken, refresh_token: refreshToken, expires_in: 300 }));
+  Promise.resolve(
+    Response.json({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 300
+    })
+  );
 const issued = tokens(ACCESS, 'refresh-1');
 const rotates = tokens(NEW_ACCESS, 'refresh-2');
 const rejects = () => Promise.resolve(Response.json({ error: 'invalid_grant' }, { status: 400 }));
@@ -48,13 +67,18 @@ function rotatesOnce() {
   };
 }
 
-function setup(answer: (call: IdpCall) => Promise<Response>, sessions = new Map<string, Session>()) {
+function setup(
+  answer: (call: IdpCall) => Promise<Response>,
+  sessions = new Map<string, Session>(),
+  clientSecret = ''
+) {
   const identityProvider = fakeIdentityProvider(answer);
   const clock = manualClock(NOW);
   const logger = recordingLogger();
   const auth = createAuth({
-    idpUrl: IDP,
+    identityProvider: { authority: IDP, clientId: CLIENT_ID, scope: SCOPE, clientSecret },
     redirectUri: REDIRECT_URI,
+    clientIpHeader: IP_HEADER,
     fetch: identityProvider.fetch,
     now: clock.now,
     logger,
@@ -68,10 +92,18 @@ function startSignIn(auth: ReturnType<typeof setup>['auth'], cookies: FakeCookie
   return new URL(auth.startSignIn(cookies)).searchParams.get('state') ?? '';
 }
 
-// One stored session, `session-1`, whose access token expires `msLeft` after NOW.
-function sessionExpiringIn(msLeft: number): Map<string, Session> {
+// One stored session, `session-1` from LOGIN_IP, whose access token expires `msLeft` after NOW.
+function sessionExpiringIn(msLeft: number, refreshToken: string | null = 'refresh-1'): Map<string, Session> {
   return new Map([
-    ['session-1', { accessToken: OLD_ACCESS, refreshToken: 'refresh-1', expiresAt: NOW.getTime() + msLeft }]
+    [
+      'session-1',
+      {
+        accessToken: OLD_ACCESS,
+        refreshToken,
+        expiresAt: NOW.getTime() + msLeft,
+        loginIp: LOGIN_IP
+      }
+    ]
   ]);
 }
 
@@ -88,6 +120,9 @@ describe('auth sign-in', () => {
 
     // Assert
     expect(location.origin + location.pathname).toBe(`${IDP}/authorize`);
+    expect(location.searchParams.get('client_id')).toBe(CLIENT_ID);
+    expect(location.searchParams.get('scope')).toBe(SCOPE);
+    expect(location.searchParams.get('response_type')).toBe('code');
     expect(location.searchParams.get('redirect_uri')).toBe(REDIRECT_URI);
     expect(location.searchParams.get('code_challenge_method')).toBe('S256');
     const state = location.searchParams.get('state') ?? '';
@@ -114,18 +149,22 @@ describe('auth sign-in', () => {
     await auth.completeSignIn(
       cookies,
       { code: 'good-code', state: location.searchParams.get('state') },
+      LOGIN_IP,
       't-1'
     );
 
     // Assert
     const form = identityProvider.calls[0]?.form;
-    expect(identityProvider.calls[0]?.path).toBe('/token');
+    expect(identityProvider.calls[0]?.path).toBe('/oauth/token');
+    expect(form?.get('client_id')).toBe(CLIENT_ID); // a public client names itself
+    expect(form?.has('client_secret')).toBe(false);
     expect(form?.get('grant_type')).toBe('authorization_code');
     expect(form?.get('code')).toBe('good-code');
     expect(form?.get('redirect_uri')).toBe(REDIRECT_URI);
     const verifier = form?.get('code_verifier') ?? '';
     expect(verifier).toMatch(BASE64URL_ID);
     expect(pkceChallenge(verifier)).toBe(location.searchParams.get('code_challenge'));
+    expect(identityProvider.calls[0]?.ip).toBe(LOGIN_IP);
   });
 
   it('stores the tokens on the server and sets only a random session id cookie, HttpOnly + Secure + SameSite', async () => {
@@ -135,7 +174,7 @@ describe('auth sign-in', () => {
     const state = startSignIn(auth, cookies);
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, 'trace-1');
+    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(outcome).toBe('signed-in');
@@ -144,7 +183,8 @@ describe('auth sign-in', () => {
     expect(sessions.get(id)).toEqual({
       accessToken: ACCESS,
       refreshToken: 'refresh-1',
-      expiresAt: NOW.getTime() + 300_000
+      expiresAt: NOW.getTime() + 300_000,
+      loginIp: LOGIN_IP
     });
     expect(cookies.options.get('bff_session')).toEqual({
       httpOnly: true,
@@ -166,7 +206,7 @@ describe('auth sign-in', () => {
     const state = startSignIn(auth, cookies);
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, { code: 'bad-code', state }, 'trace-1');
+    const outcome = await auth.completeSignIn(cookies, { code: 'bad-code', state }, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(outcome).toBe('failed');
@@ -191,7 +231,7 @@ describe('auth sign-in', () => {
     const callback = override === null ? { code: null, state } : { code: 'good-code', state: override };
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, callback, 'trace-1');
+    const outcome = await auth.completeSignIn(cookies, callback, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(outcome).toBe('failed');
@@ -208,7 +248,12 @@ describe('auth sign-in', () => {
     const cookies = fakeCookieJar(signInId === undefined ? {} : { bff_signin: signInId });
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state: 's' }, 'trace-1');
+    const outcome = await auth.completeSignIn(
+      cookies,
+      { code: 'good-code', state: 's' },
+      LOGIN_IP,
+      'trace-1'
+    );
 
     // Assert
     expect(outcome).toBe('failed');
@@ -224,7 +269,7 @@ describe('auth sign-in', () => {
     clock.advance(600_001);
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, 'trace-1');
+    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(outcome).toBe('failed');
@@ -237,10 +282,10 @@ describe('auth sign-in', () => {
     const cookies = fakeCookieJar();
     const state = startSignIn(auth, cookies);
     const replay = fakeCookieJar({ bff_signin: cookies.get('bff_signin') ?? '' });
-    await auth.completeSignIn(cookies, { code: 'good-code', state }, 't-1');
+    await auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 't-1');
 
     // Act
-    const outcome = await auth.completeSignIn(replay, { code: 'good-code', state }, 't-2');
+    const outcome = await auth.completeSignIn(replay, { code: 'good-code', state }, LOGIN_IP, 't-2');
 
     // Assert
     expect(outcome).toBe('failed');
@@ -254,7 +299,7 @@ describe('auth sign-in', () => {
     const state = startSignIn(auth, cookies);
 
     // Act
-    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, 'trace-1');
+    const outcome = await auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(outcome).toBe('failed');
@@ -273,7 +318,7 @@ describe('auth session', () => {
     const { auth, identityProvider } = setup(rotates, sessionExpiringIn(1));
 
     // Act
-    const lookup = await auth.currentSession(signedIn(), 'trace-1');
+    const lookup = await auth.currentSession(signedIn(), LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup).toEqual({ kind: 'active', accessToken: OLD_ACCESS, userId: 'user-1' });
@@ -286,7 +331,7 @@ describe('auth session', () => {
     const cookies = signedIn();
 
     // Act
-    const lookup = await auth.currentSession(cookies, 'trace-1');
+    const lookup = await auth.currentSession(cookies, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup).toEqual({ kind: 'active', accessToken: NEW_ACCESS, userId: 'user-1' });
@@ -295,8 +340,10 @@ describe('auth session', () => {
     expect(sessions.get('session-1')).toEqual({
       accessToken: NEW_ACCESS,
       refreshToken: 'refresh-2',
-      expiresAt: NOW.getTime() + 300_000
+      expiresAt: NOW.getTime() + 300_000,
+      loginIp: LOGIN_IP
     });
+    expect(identityProvider.calls[0]?.ip).toBe(LOGIN_IP);
     expect(cookies.get('bff_session')).toBe('session-1');
     expect(cookies.options.size).toBe(0);
     expect(logger.find('refresh.ok')).toEqual({
@@ -312,7 +359,7 @@ describe('auth session', () => {
     const cookies = signedIn();
 
     // Act
-    const lookup = await auth.currentSession(cookies, 'trace-1');
+    const lookup = await auth.currentSession(cookies, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup).toEqual({ kind: 'none' });
@@ -331,8 +378,8 @@ describe('auth session', () => {
 
     // Act
     const lookups = await Promise.all([
-      auth.currentSession(signedIn(), 't-1'),
-      auth.currentSession(signedIn(), 't-2')
+      auth.currentSession(signedIn(), LOGIN_IP, 't-1'),
+      auth.currentSession(signedIn(), LOGIN_IP, 't-2')
     ]);
 
     // Assert
@@ -346,11 +393,11 @@ describe('auth session', () => {
   it('gives the renewed session to a later request with the same cookie, without renewing again', async () => {
     // Arrange
     const { auth, identityProvider, clock } = setup(rotatesOnce(), sessionExpiringIn(0));
-    await auth.currentSession(signedIn(), 't-1');
+    await auth.currentSession(signedIn(), LOGIN_IP, 't-1');
     clock.advance(60_000);
 
     // Act
-    const lookup = await auth.currentSession(signedIn(), 't-2');
+    const lookup = await auth.currentSession(signedIn(), LOGIN_IP, 't-2');
 
     // Assert
     expect(lookup).toEqual({ kind: 'active', accessToken: NEW_ACCESS, userId: 'user-1' });
@@ -363,7 +410,7 @@ describe('auth session', () => {
     const cookies = signedIn();
 
     // Act
-    const lookup = await auth.currentSession(cookies, 'trace-1');
+    const lookup = await auth.currentSession(cookies, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup).toEqual({ kind: 'unavailable' });
@@ -381,7 +428,7 @@ describe('auth session', () => {
     const { auth, identityProvider } = setup(rotates, sessionExpiringIn(0));
 
     // Act
-    const lookup = await auth.currentSession(cookies, 'trace-1');
+    const lookup = await auth.currentSession(cookies, LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup).toEqual({ kind: 'none' });
@@ -390,11 +437,22 @@ describe('auth session', () => {
 
   it.each([
     ['400', 400, { error: 'invalid_grant' }, 'none'],
-    ['499', 499, { error: 'invalid_grant' }, 'none'],
+    ['499', 499, { error: 'invalid_grant' }, 'unavailable'],
     ['500', 500, {}, 'unavailable'],
     ['503', 503, {}, 'unavailable'],
     ['200 without access_token', 200, { refresh_token: 'refresh-2', expires_in: 300 }, 'unavailable'],
-    ['200 without refresh_token', 200, { access_token: NEW_ACCESS, expires_in: 300 }, 'unavailable'],
+    [
+      '200 without refresh_token (the current one stays)',
+      200,
+      { access_token: NEW_ACCESS, expires_in: 300 },
+      'active'
+    ],
+    [
+      '200 with a number refresh_token',
+      200,
+      { access_token: NEW_ACCESS, refresh_token: 7, expires_in: 300 },
+      'unavailable'
+    ],
     [
       '200 with a text expires_in',
       200,
@@ -406,10 +464,185 @@ describe('auth session', () => {
     const { auth } = setup(() => Promise.resolve(Response.json(body, { status })), sessionExpiringIn(0));
 
     // Act
-    const lookup = await auth.currentSession(signedIn(), 'trace-1');
+    const lookup = await auth.currentSession(signedIn(), LOGIN_IP, 'trace-1');
 
     // Assert
     expect(lookup.kind).toBe(kind);
+  });
+});
+
+describe('auth as a confidential client', () => {
+  it('sends the client id and secret in the form (kr-identity reads them there)', async () => {
+    // Arrange
+    const { auth, identityProvider } = setup(rotates, sessionExpiringIn(0), 's3cr:et');
+
+    // Act
+    await auth.currentSession(signedIn(), LOGIN_IP, 'trace-1');
+
+    // Assert
+    const call = identityProvider.calls[0];
+    expect(call?.form.get('client_id')).toBe(CLIENT_ID);
+    expect(call?.form.get('client_secret')).toBe('s3cr:et');
+  });
+
+  it.each([
+    ['401 invalid_client', 401],
+    ['429', 429]
+  ])("a refresh answered %s keeps the session (not the user's fault): unavailable", async (_, status) => {
+    // Arrange
+    const { auth, sessions } = setup(
+      () => Promise.resolve(Response.json({ error: 'x' }, { status })),
+      sessionExpiringIn(0)
+    );
+
+    // Act
+    const lookup = await auth.currentSession(signedIn(), LOGIN_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'unavailable' });
+    expect(sessions.has('session-1')).toBe(true);
+  });
+});
+
+describe('auth session from another IP: the provider decides, through a refresh with that IP', () => {
+  it('refreshes at once (token not due) with the new IP; accepted → active, the session moves to the new IP', async () => {
+    // Arrange
+    const { auth, identityProvider, sessions } = setup(rotates, sessionExpiringIn(60_000));
+
+    // Act
+    const lookup = await auth.currentSession(signedIn(), NEW_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'active', accessToken: NEW_ACCESS, userId: 'user-1' });
+    expect(identityProvider.calls.map((c) => c.ip)).toEqual([NEW_IP]);
+    expect(sessions.get('session-1')?.loginIp).toBe(NEW_IP);
+  });
+
+  it('a later request from the new IP needs no other refresh', async () => {
+    // Arrange
+    const { auth, identityProvider } = setup(rotatesOnce(), sessionExpiringIn(60_000));
+    await auth.currentSession(signedIn(), NEW_IP, 't-1');
+
+    // Act
+    const lookup = await auth.currentSession(signedIn(), NEW_IP, 't-2');
+
+    // Assert
+    expect(lookup.kind).toBe('active');
+    expect(identityProvider.calls).toHaveLength(1);
+  });
+
+  it('refused → ip-changed: session deleted, cookie cleared, refresh.failed ip_refused', async () => {
+    // Arrange
+    const { auth, logger, sessions } = setup(rejects, sessionExpiringIn(60_000));
+    const cookies = signedIn();
+
+    // Act
+    const lookup = await auth.currentSession(cookies, NEW_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'ip-changed' });
+    expect(sessions.has('session-1')).toBe(false);
+    expect(cookies.get('bff_session')).toBeUndefined();
+    expect(logger.find('refresh.failed')?.fields).toEqual({
+      reason: 'ip_refused',
+      userId: 'user-1',
+      traceId: 'trace-1'
+    });
+  });
+
+  it('the provider down → unavailable; the old token is not used from the new IP, the session is kept', async () => {
+    // Arrange
+    const { auth, sessions } = setup(down, sessionExpiringIn(60_000));
+
+    // Act
+    const lookup = await auth.currentSession(signedIn(), NEW_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'unavailable' });
+    expect(sessions.get('session-1')?.loginIp).toBe(LOGIN_IP);
+  });
+
+  it('a request without an IP refreshes too, without the IP header', async () => {
+    // Arrange
+    const { auth, identityProvider } = setup(rotates, sessionExpiringIn(60_000));
+
+    // Act
+    await auth.currentSession(signedIn(), null, 'trace-1');
+
+    // Assert
+    expect(identityProvider.calls).toHaveLength(1);
+    expect(identityProvider.calls[0]?.ip).toBeNull();
+  });
+
+  it('two IPs at once: one refresh at a time, each with the latest token, both active', async () => {
+    // Arrange: one-time refresh tokens, like the real provider
+    const used = new Set<string>();
+    let count = 1;
+    const { auth, identityProvider } = setup((call) => {
+      const token = call.form.get('refresh_token') ?? '';
+      if (used.has(token)) return rejects();
+      used.add(token);
+      count += 1;
+      return tokens(NEW_ACCESS, `refresh-${count}`)();
+    }, sessionExpiringIn(0));
+
+    // Act
+    const lookups = await Promise.all([
+      auth.currentSession(signedIn(), LOGIN_IP, 't-1'),
+      auth.currentSession(signedIn(), NEW_IP, 't-2')
+    ]);
+
+    // Assert
+    expect(lookups.map((l) => l.kind)).toEqual(['active', 'active']);
+    expect(identityProvider.calls.map((c) => [c.form.get('refresh_token'), c.ip])).toEqual([
+      ['refresh-1', LOGIN_IP],
+      ['refresh-2', NEW_IP]
+    ]);
+  });
+});
+
+describe('auth session without a refresh token: no one to ask', () => {
+  it('the token serves, from any IP, without calling the provider', async () => {
+    // Arrange
+    const { auth, identityProvider } = setup(issued, sessionExpiringIn(60_000, null));
+
+    // Act
+    const lookup = await auth.currentSession(signedIn(), NEW_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'active', accessToken: OLD_ACCESS, userId: 'user-1' });
+    expect(identityProvider.calls).toEqual([]);
+  });
+
+  it('once the token expires → none: session deleted, cookie cleared, session.expired logged', async () => {
+    // Arrange
+    const { auth, identityProvider, logger, sessions } = setup(issued, sessionExpiringIn(0, null));
+    const cookies = signedIn();
+
+    // Act
+    const lookup = await auth.currentSession(cookies, LOGIN_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'none' });
+    expect(identityProvider.calls).toEqual([]);
+    expect(sessions.has('session-1')).toBe(false);
+    expect(cookies.get('bff_session')).toBeUndefined();
+    expect(logger.find('session.expired')?.fields).toEqual({ userId: 'user-1', traceId: 'trace-1' });
+  });
+
+  it('a code exchange without refresh_token stores a session with none', async () => {
+    // Arrange
+    const { auth, sessions } = setup(() =>
+      Promise.resolve(Response.json({ access_token: ACCESS, expires_in: 300 }))
+    );
+    const cookies = fakeCookieJar();
+    const state = startSignIn(auth, cookies);
+
+    // Act
+    await auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 'trace-1');
+
+    // Assert
+    expect(sessions.get(cookies.get('bff_session') ?? '')?.refreshToken).toBeNull();
   });
 });
 
@@ -426,11 +659,12 @@ describe('auth sign-out', () => {
     await auth.signOut(cookies, 'trace-1');
 
     // Assert
-    expect(identityProvider.calls[0]?.path).toBe('/revoke');
+    expect(identityProvider.calls[0]?.path).toBe('/oauth/revoke');
+    expect(identityProvider.calls[0]?.form.get('token_type_hint')).toBe('refresh_token');
     expect(identityProvider.calls[0]?.form.get('token')).toBe('refresh-1');
     expect(sessions.has('session-1')).toBe(false);
     expect(cookies.get('bff_session')).toBeUndefined();
-    expect(await auth.currentSession(signedIn(), 'trace-2')).toEqual({ kind: 'none' });
+    expect(await auth.currentSession(signedIn(), LOGIN_IP, 'trace-2')).toEqual({ kind: 'none' });
     expect(logger.find('signout')?.fields).toEqual({ userId: 'user-1', revoked: true, traceId: 'trace-1' });
     expect(logger.serialized()).not.toContain('refresh-1');
   });

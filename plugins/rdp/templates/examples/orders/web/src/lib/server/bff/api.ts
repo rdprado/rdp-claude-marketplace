@@ -15,6 +15,8 @@ export type ProxyRequest = {
   readonly body: ArrayBuffer | null;
   readonly traceparent: string;
   readonly traceId: string;
+  // The browser's IP, from the connection (null: none): the identity provider checks it on a refresh.
+  readonly clientIp: string | null;
 };
 
 export type ProxyReply = {
@@ -28,7 +30,11 @@ export type ProxyReply = {
 export type ApiProxyOptions = {
   readonly apiUrl: string;
   // The auth module's `currentSession`: the access token, renewed when needed.
-  readonly currentSession: (cookies: CookieJar, traceId: string) => Promise<SessionLookup>;
+  readonly currentSession: (
+    cookies: CookieJar,
+    clientIp: string | null,
+    traceId: string
+  ) => Promise<SessionLookup>;
   readonly fetch: Fetch;
   readonly now: () => Date;
   readonly logger: Logger;
@@ -36,7 +42,8 @@ export type ApiProxyOptions = {
 
 export type ApiProxy = ReturnType<typeof createApiProxy>;
 
-type BffErrorCode = 'not-found' | 'session-expired' | 'identity-provider-unavailable' | 'api-unavailable';
+type BffErrorCode =
+  'not-found' | 'session-expired' | 'ip-changed' | 'identity-provider-unavailable' | 'api-unavailable';
 type Upstream = { readonly status: number; readonly contentType: string | null; readonly body: ArrayBuffer };
 
 const API_PREFIX = '/api/';
@@ -66,8 +73,9 @@ export function createApiProxy(options: ApiProxyOptions) {
     // The pathname is already normalized (no `..`); anything outside /api/ never reaches the API.
     if (!request.pathAndQuery.startsWith(API_PREFIX)) return bffError(404, 'not-found', null);
 
-    const session = await currentSession(cookies, request.traceId);
+    const session = await currentSession(cookies, request.clientIp, request.traceId);
     if (session.kind === 'none') return bffError(401, 'session-expired', null);
+    if (session.kind === 'ip-changed') return bffError(401, 'ip-changed', null);
     if (session.kind === 'unavailable') return bffError(503, 'identity-provider-unavailable', null);
 
     const started = now().getTime();

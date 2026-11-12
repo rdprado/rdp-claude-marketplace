@@ -122,6 +122,21 @@ public sealed class DevIdentityProviderControllerTests : IDisposable
     }
 
     [Fact]
+    public void Token_WithKrIdentityClientFields_StillRedeemsValidCode()
+    {
+        // Arrange
+        var code = SignIn();
+
+        // Act
+        var result = _controller.Token(
+            "authorization_code", code, RedirectUri, Verifier, null, "orders-web", "any-secret", "openid offline_access");
+
+        // Assert
+        var tokens = Assert.IsType<DevTokenResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.False(string.IsNullOrEmpty(tokens.RefreshToken));
+    }
+
+    [Fact]
     public void Token_WithCodeUsedTwice_RefusesTheSecondTime()
     {
         // Arrange

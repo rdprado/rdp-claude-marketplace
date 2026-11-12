@@ -35,7 +35,19 @@ function buildBff(): Bff {
   const config = readAppSettings();
   const now = () => new Date();
   const logger = createLogger();
-  const auth = createAuth({ idpUrl: config.idpUrl, redirectUri: config.authRedirectUri, fetch, now, logger });
+  const auth = createAuth({
+    identityProvider: {
+      authority: config.idpAuthority,
+      clientId: config.idpClientId,
+      scope: config.idpScope,
+      clientSecret: config.idpClientSecret
+    },
+    redirectUri: config.authRedirectUri,
+    clientIpHeader: config.clientIpHeader,
+    fetch,
+    now,
+    logger
+  });
   const api = createApiProxy({
     apiUrl: config.apiUrl,
     currentSession: auth.currentSession,

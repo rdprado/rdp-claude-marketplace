@@ -9,11 +9,23 @@ The BFF holds identity and the token, so browser JavaScript never sees it (IETF
 
 - At sign-in the BFF talks to the identity provider and keeps the tokens **on the server**. The
   front never calls the identity provider.
-- The cookie carries only a random session id (HttpOnly + Secure + SameSite), never a token, not
-  even encrypted. An unknown id counts as no session.
+- **The cookie never carries a token: not the access, refresh or id token, not even encrypted or
+  signed.** It carries only a random session id (HttpOnly + Secure + SameSite). An unknown id
+  counts as no session.
 - On each call the browser sends the cookie; the BFF looks the tokens up by the id.
 - Tokens live in the BFF's memory: a restart (each deploy) signs everyone out, and the BFF runs as
   one instance.
+
+The identity provider is kr-identity (orders example: `auth.ts`, `appSettings.ts`):
+
+- Config `IdentityProvider`: `Authority`, `ClientId`, `Scope` (`openid offline_access` + the API's),
+  `RedirectUri`, `ClientIpHeader`. Ask for the addresses, the client id and the scope.
+- Endpoints: `{Authority}/authorize`, `/oauth/token`, `/oauth/revoke`.
+- Confidential client in HML/PRD: the secret only from the environment (`IdentityProvider__ClientSecret`),
+  sent as the form field `client_secret`, never in a committed file. Locally a public client against the
+  API's dev identity provider, which answers on the same paths.
+- A refresh answered 400 ends the session; any other error (401 `invalid_client`, 429, 5xx) keeps it
+  (503): it's the BFF's or the provider's problem, not the user's.
 
 Two valid shapes:
 
@@ -60,7 +72,17 @@ clock and logger).
 - Sign-in: exchanges the code with the identity provider, stores the tokens, sets the session id cookie.
 - Refresh: renews the access token when it expires (the refresh token rotates). Requests that arrive
   together share one renewal. When the identity provider refuses the refresh (expired, revoked, a rotated token used again),
-  drop the session.
+  drop the session. The identity provider decides when a session ends, never the BFF.
+- User's IP (when the identity provider checks it): the BFF takes the IP from the connection (the
+  framework's client address; behind a proxy, only the proxy's header), never from a header the browser
+  sets, and sends it in the provider's header on the code exchange and on every refresh. A request from
+  another IP than the session's refreshes at once with that IP: refused → session ends, 401 `ip-changed`;
+  provider down → 503, and the old token is never used from the new IP.
+- No refresh token (the provider gave none): the access token serves until it expires, then the session
+  ends. A refresh answer without one keeps the current one.
+- An open connection proxied (SignalR hub, WebSocket): its token was sent when it opened, so after each
+  refresh the BFF sends the new token to the upstream for that connection. The BFF never closes it; the
+  upstream decides.
 - Sign-out: revokes the refresh token at the identity provider, deletes the session, clears the cookie.
 - Proxy: forwards `/api/*` to the API with `Authorization: Bearer`.
 
@@ -76,7 +98,7 @@ your own, even when it looks safer:
 Errors: the BFF doesn't invent status codes. What an upstream answers (API, identity provider, any
 other service), error or not, passes through with its status and body unchanged; never swap it for
 the BFF's own. The BFF answers by itself only when the request never got an answer: no session
-(`session-expired`), wrong origin, upstream down (`api-unavailable`). Same shape
+(`session-expired`, `ip-changed`), wrong origin, upstream down (`api-unavailable`). Same shape
 (`{ "error": { "code" } }`), never an exception or a stack.
 
 ### What to test
@@ -89,6 +111,8 @@ Unit tests, passing fake `fetch`, clock and logger:
   - Expired access → renews; the stored tokens rotate, the cookie keeps the same id.
   - Failed refresh → session deleted, cookie cleared, 401.
   - Two concurrent requests → only one renewal.
+  - Another IP → refreshes at once with that IP; refused → 401 `ip-changed`; provider down → 503.
+  - No refresh token → the token serves until it expires, then no session; the provider is never called.
 - **Logout:** revokes at the identity provider, deletes the session and clears the cookie.
 - **Proxy:**
   - Adds the Bearer token; drops the `Cookie` header before calling the API.
@@ -137,7 +161,8 @@ end up) yet: pick it per project, with the team; the tool names below are exampl
 | Event | Level |
 |---|---|
 | `signin.ok` / `signin.failed` (reason: `invalid_code`, `expired`, `idp_down`) | Info / Warning |
-| `refresh.ok` / `refresh.failed` (reason: `expired`, `revoked`) | Info / Warning |
+| `refresh.ok` / `refresh.failed` (reason: `revoked`, `ip_refused`, `idp_down`) | Info / Warning |
+| `session.expired` (no refresh token, the access token expired) | Info |
 | `signout` (and whether the revoke worked) | Info |
 | `csrf.rejected` | Warning |
 

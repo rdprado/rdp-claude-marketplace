@@ -7,7 +7,9 @@ namespace OrdersExample.DevIdentityProvider.Controllers;
 
 /// <summary>
 /// A fake OAuth 2.0 identity provider for Development: authorization code + PKCE (S256), rotating refresh
-/// tokens, revoke. It approves every sign-in as the dev user. Errors use the OAuth shape
+/// tokens, revoke. It answers on kr-identity's paths and parameters (<c>authorize</c>, <c>oauth/token</c>,
+/// <c>oauth/revoke</c> under the issuer), so a BFF written for kr-identity works against it unchanged.
+/// It approves every sign-in as the dev user. Errors use the OAuth shape
 /// (<c>{ "error": "invalid_grant" }</c>, RFC 6749 §5.2) because it stands in for a real provider.
 /// </summary>
 [ApiController]
@@ -20,12 +22,15 @@ public sealed class DevIdentityProviderController(
 {
     private const string InvalidRequest = "invalid_request";
 
+    // client_id, client_secret and scope are accepted as kr-identity takes them, and ignored: the fake trusts any client.
     [HttpGet("authorize")]
     public IActionResult Authorize(
         [FromQuery(Name = "redirect_uri")] string? redirectUri,
         [FromQuery(Name = "state")] string? state,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
-        [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod)
+        [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
+        [FromQuery(Name = "client_id")] string? clientId = null,
+        [FromQuery(Name = "scope")] string? scope = null)
     {
         // Never redirect to an address that isn't registered: that would hand the code to anyone.
         if (redirectUri is null || !options.Value.RedirectUris.Contains(redirectUri, StringComparer.Ordinal))
@@ -37,14 +42,17 @@ public sealed class DevIdentityProviderController(
         return Redirect(WithQuery(redirectUri, ("code", code), ("state", state)));
     }
 
-    [HttpPost("token")]
+    [HttpPost("oauth/token")]
     [Consumes("application/x-www-form-urlencoded")]
     public IActionResult Token(
         [FromForm(Name = "grant_type")] string? grantType,
         [FromForm(Name = "code")] string? code,
         [FromForm(Name = "redirect_uri")] string? redirectUri,
         [FromForm(Name = "code_verifier")] string? codeVerifier,
-        [FromForm(Name = "refresh_token")] string? refreshToken)
+        [FromForm(Name = "refresh_token")] string? refreshToken,
+        [FromForm(Name = "client_id")] string? clientId = null,
+        [FromForm(Name = "client_secret")] string? clientSecret = null,
+        [FromForm(Name = "scope")] string? scope = null)
     {
         Response.Headers.CacheControl = "no-store";
         return grantType switch
@@ -55,9 +63,13 @@ public sealed class DevIdentityProviderController(
         };
     }
 
-    [HttpPost("revoke")]
+    [HttpPost("oauth/revoke")]
     [Consumes("application/x-www-form-urlencoded")]
-    public IActionResult Revoke([FromForm(Name = "token")] string? token)
+    public IActionResult Revoke(
+        [FromForm(Name = "token")] string? token,
+        [FromForm(Name = "client_id")] string? clientId = null,
+        [FromForm(Name = "client_secret")] string? clientSecret = null,
+        [FromForm(Name = "scope")] string? scope = null)
     {
         if (string.IsNullOrEmpty(token))
             return OAuthError(InvalidRequest);
