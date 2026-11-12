@@ -205,6 +205,10 @@ hold rules written nowhere else, so treat the code as part of these rules.
 
 ## Crapper and Mutator: the goal (TypeScript/JavaScript only; in .NET, Sonar is the check)
 
+Saturation testing: every expression is covered, so changing one fails a test. That gives semantic
+stability: a change for new requirements can't silently break unrelated code. When requirements change,
+rewrite the old tests too. It doesn't prove the system works: humans judge that (Gherkin, manual tests).
+
 You are not done until every function you changed has CRAP under 10 and no mutant survives in the
 files you changed. Getting there means many tests and close to 100% line and branch coverage.
 Write in `.claude/tmp/log-<task>.md` the final numbers of both.
