@@ -1,9 +1,9 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it, vi } from 'vitest';
-import type { Clock } from '../../../application/ports/Clock.ts';
-import type { Monitoring } from '../../../application/ports/Monitoring.ts';
-import { SessionExpiredError, type Session } from '../../../application/ports/Session.ts';
-import { BffHttpClient } from './BffHttpClient.ts';
+import type { Clock } from '#application/ports/Clock.ts';
+import type { Monitoring } from '#application/ports/Monitoring.ts';
+import { SessionExpiredError, type Session } from '#application/ports/Session.ts';
+import { BffHttpClient } from '#infrastructure/data/http/BffHttpClient.ts';
 
 // Each call to now() moves 25 ms forward, so the recorded duration is known.
 function steppingClock(): Clock {

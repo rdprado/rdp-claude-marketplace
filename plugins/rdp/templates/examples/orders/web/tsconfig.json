@@ -7,5 +7,5 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true
   },
-  "include": ["src", "*.ts"]
+  "include": ["src", "tests", "*.ts"]
 }

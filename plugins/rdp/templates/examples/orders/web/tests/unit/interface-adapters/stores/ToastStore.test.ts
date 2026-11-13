@@ -1,6 +1,6 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { ToastStore } from './ToastStore.ts';
+import { ToastStore } from '#interface-adapters/stores/ToastStore.ts';
 
 describe('ToastStore', () => {
   it('shows toasts in order and removes only the dismissed one', () => {

@@ -1,6 +1,6 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it, vi } from 'vitest';
-import { ViewModel } from './ViewModel.ts';
+import { ViewModel } from '#interface-adapters/view-models/ViewModel.ts';
 
 class CounterViewModel extends ViewModel<{ readonly count: number }> {
   constructor() {

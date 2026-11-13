@@ -2,7 +2,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadAppSettings, readFromConfigFolder, type ReadConfigFile } from './appSettings.ts';
+import {
+  loadAppSettings,
+  readFromConfigFolder,
+  type ReadConfigFile
+} from '../../../../src/lib/server/appSettings.ts';
 
 // The committed files, read from web/config/ (Vitest runs in web/).
 const committedFiles: ReadConfigFile = (fileName) =>

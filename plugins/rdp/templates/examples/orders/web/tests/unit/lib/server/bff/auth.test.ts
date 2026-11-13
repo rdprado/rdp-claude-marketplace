@@ -1,13 +1,13 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { createAuth, pkceChallenge, userIdOf, type CsrfCheck, type Fetch, type Session } from './auth.ts';
+import { createAuth, pkceChallenge, userIdOf, type CsrfCheck, type Fetch, type Session } from '#bff/auth.ts';
 import {
   accessTokenFor,
   fakeCookieJar,
   manualClock,
   recordingLogger,
   type FakeCookieJar
-} from './testing/fakes.ts';
+} from '../../../../support/fakes.ts';
 
 const IDP = 'https://idp.example';
 const REDIRECT_URI = 'https://app.example/auth/callback';

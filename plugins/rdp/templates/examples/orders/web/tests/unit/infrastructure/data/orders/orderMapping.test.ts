@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { UnexpectedResponseError } from '../http/UnexpectedResponseError.ts';
-import { toOrder, toOrders } from './orderMapping.ts';
+import { UnexpectedResponseError } from '#infrastructure/data/http/UnexpectedResponseError.ts';
+import { toOrder, toOrders } from '#infrastructure/data/orders/orderMapping.ts';
 
 // As the API sends it (camelCase JSON, api/…/Contracts/OrderResponse.cs).
 const json = {

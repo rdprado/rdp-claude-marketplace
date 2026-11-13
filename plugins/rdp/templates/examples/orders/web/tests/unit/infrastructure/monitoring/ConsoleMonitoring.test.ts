@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { RequestRecord } from '../../application/ports/Monitoring.ts';
-import { ConsoleMonitoring } from './ConsoleMonitoring.ts';
+import type { RequestRecord } from '#application/ports/Monitoring.ts';
+import { ConsoleMonitoring } from '#infrastructure/monitoring/ConsoleMonitoring.ts';
 
 function request(n: number): RequestRecord {
   return { method: 'GET', route: '/api/v1/orders/:id', status: 200, durationMs: n };

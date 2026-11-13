@@ -11,11 +11,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 // environment variables (Api__Url, ...) once the fakes below listen; the BFF reads it on the first request.
 const REDIRECT_URI = 'http://app.test/auth/callback';
 
-const { handle, handleError } = await import('./hooks.server.ts');
-const signinRoute = await import('./routes/auth/signin/+server.ts');
-const callbackRoute = await import('./routes/auth/callback/+server.ts');
-const signoutRoute = await import('./routes/auth/signout/+server.ts');
-const apiRoute = await import('./routes/api/[...path]/+server.ts');
+const { handle, handleError } = await import('../../../src/hooks.server.ts');
+const signinRoute = await import('../../../src/routes/auth/signin/+server.ts');
+const callbackRoute = await import('../../../src/routes/auth/callback/+server.ts');
+const signoutRoute = await import('../../../src/routes/auth/signout/+server.ts');
+const apiRoute = await import('../../../src/routes/api/[...path]/+server.ts');
 
 const APP = 'http://app.test';
 const USER_ID = '6f1c1d5e-2b7a-4c3e-9f4e-0d6a2b9c8e11';

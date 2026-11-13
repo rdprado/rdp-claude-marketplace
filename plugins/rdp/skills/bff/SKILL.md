@@ -122,7 +122,8 @@ Unit tests, passing fake `fetch`, clock and logger:
   - No token in any response body, header or cookie to the browser.
   - A mutating request from another origin is refused (CSRF).
 
-Integration: the real entry against a fake HTTP upstream (identity provider + API).
+Integration (`tests/integration/`): narrow, each module against a fake HTTP server (`auth` → identity
+provider, `api` → API, the front's gateway → BFF); broad, the real entry against fake upstreams.
 
 ### Observability
 

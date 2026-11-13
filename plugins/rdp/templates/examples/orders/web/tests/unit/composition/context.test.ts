@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildContainer } from './container.ts';
-import { getContainer, setContainer } from './context.ts';
+import { buildContainer } from '#composition/container.ts';
+import { getContainer, setContainer } from '#composition/context.ts';
 
 // Svelte's context exists only while a component initializes; a Map stands in for it here.
 const svelteContext = new Map<unknown, unknown>();

@@ -1,6 +1,6 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { requestLogFields, routeTemplate, traceContext, traceIdOf } from './observability.ts';
+import { requestLogFields, routeTemplate, traceContext, traceIdOf } from '#bff/observability.ts';
 
 // Deterministic ids: 'b' repeated, so the expected header is known.
 const newId = (bytes: number) => 'b'.repeat(bytes * 2);

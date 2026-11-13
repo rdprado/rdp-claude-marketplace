@@ -1,8 +1,8 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { createApiProxy, type ProxyRequest } from './api.ts';
-import type { Fetch, SessionLookup } from './auth.ts';
-import { fakeCookieJar, manualClock, recordingLogger, type ManualClock } from './testing/fakes.ts';
+import { createApiProxy, type ProxyRequest } from '#bff/api.ts';
+import type { Fetch, SessionLookup } from '#bff/auth.ts';
+import { fakeCookieJar, manualClock, recordingLogger, type ManualClock } from '../../../../support/fakes.ts';
 
 const API = 'http://api.test';
 const NOW = new Date('2026-10-28T12:00:00Z');

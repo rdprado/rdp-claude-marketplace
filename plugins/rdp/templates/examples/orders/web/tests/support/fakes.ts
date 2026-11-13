@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 // Tests only: plain fakes of what the BFF modules take as parameters (cookies, clock, logger).
-import type { CookieJar, CookieOptions } from '../auth.ts';
-import type { LogFields, Logger } from '../observability.ts';
+import type { CookieJar, CookieOptions } from '#bff/auth.ts';
+import type { LogFields, Logger } from '#bff/observability.ts';
 
 export type FakeCookieJar = CookieJar & {
   readonly values: Map<string, string>;

@@ -1,12 +1,12 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it, vi } from 'vitest';
-import type { IdGenerator } from '../../../application/ports/IdGenerator.ts';
-import type { Monitoring } from '../../../application/ports/Monitoring.ts';
-import type { Order, OrdersGateway } from '../../../application/ports/OrdersGateway.ts';
-import { SessionExpiredError } from '../../../application/ports/Session.ts';
-import type { Toaster } from '../../../application/ports/Toaster.ts';
-import { Result } from '../../../application/Result.ts';
-import { OrdersViewModel } from './OrdersViewModel.ts';
+import type { IdGenerator } from '#application/ports/IdGenerator.ts';
+import type { Monitoring } from '#application/ports/Monitoring.ts';
+import type { Order, OrdersGateway } from '#application/ports/OrdersGateway.ts';
+import { SessionExpiredError } from '#application/ports/Session.ts';
+import type { Toaster } from '#application/ports/Toaster.ts';
+import { Result } from '#application/Result.ts';
+import { OrdersViewModel } from '#interface-adapters/screens/orders/OrdersViewModel.ts';
 
 const CREATED = new Date('2026-10-28T12:00:00Z');
 

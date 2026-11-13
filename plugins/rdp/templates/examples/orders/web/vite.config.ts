@@ -13,11 +13,11 @@ export default defineConfig({
     watch: { ignored: ['**/coverage/**', '**/target/**', '**/.metrics/**'] }
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['tests/**/*.test.ts'],
     environment: 'node',
     coverage: {
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts']
+      exclude: ['src/**/*.d.ts']
     }
   }
 });

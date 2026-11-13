@@ -1,6 +1,6 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { DictionaryTranslator } from './DictionaryTranslator.ts';
+import { DictionaryTranslator } from '#infrastructure/i18n/DictionaryTranslator.ts';
 
 const texts = { 'orders.empty': 'Nenhuma ordem.', 'errors.unexpected': 'Algo deu errado.' };
 
@@ -35,7 +35,7 @@ describe('DictionaryTranslator', () => {
 
   it('every error code of the API contract has a Portuguese text', async () => {
     // Arrange: the codes the API sends (its ErrorCodes), plus the BFF's own.
-    const { ptBR } = await import('./ptBR.ts');
+    const { ptBR } = await import('#infrastructure/i18n/ptBR.ts');
     const codes = [
       'unexpected',
       'validation-failed',

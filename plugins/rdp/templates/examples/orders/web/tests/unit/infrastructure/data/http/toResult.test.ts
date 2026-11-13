@@ -1,7 +1,7 @@
 // Example code (RDP orders example): a placeholder. Change it or delete it to fit your project.
 import { describe, expect, it } from 'vitest';
-import { toResult } from './toResult.ts';
-import { UnexpectedResponseError } from './UnexpectedResponseError.ts';
+import { toResult } from '#infrastructure/data/http/toResult.ts';
+import { UnexpectedResponseError } from '#infrastructure/data/http/UnexpectedResponseError.ts';
 
 const asIs = (json: unknown) => json;
 
