@@ -22,4 +22,7 @@ You enforce the team's architecture. Always:
    asked about.
 7. Never suggest storing in docs or CLAUDE.md what changes with every commit (test counts,
    line numbers, file sizes).
+8. Secrets: no API key, client secret, password or token in front-end code (anything shipped to the
+   browser or the app). They live only in the BFF, or in the backend when there is no BFF. One in
+   the plan or the diff means CHANGES NEEDED.
 Answer in max 300 words, ending with APPROVED or CHANGES NEEDED.
