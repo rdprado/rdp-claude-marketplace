@@ -1,11 +1,11 @@
 <!-- Example code (RDP orders example): a placeholder. Change it or delete it to fit your project. -->
-<!-- Layer: Interface Adapters — entry: builds the container once and delivers it; renders the page,
+<!-- Layer: UI (Frameworks & Drivers) — entry: builds the container once and delivers it; renders the page,
      the toasts and the sign-out form (a plain POST, checked by the BFF's CSRF guard). -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { buildContainer } from '#composition/container.ts';
   import { setContainer } from '#composition/context.ts';
-  import Toasts from '#interface-adapters/components/Toasts.svelte';
+  import Toasts from '#ui/components/Toasts.svelte';
 
   const { children }: { children: Snippet } = $props();
   const container = buildContainer({

@@ -36,6 +36,7 @@
     "#application/*": "./src/application/*",
     "#infrastructure/*": "./src/infrastructure/*",
     "#interface-adapters/*": "./src/interface-adapters/*",
+    "#ui/*": "./src/ui/*",
     "#composition/*": "./src/composition/*",
     "#bff/*": "./src/lib/server/bff/*"
   }

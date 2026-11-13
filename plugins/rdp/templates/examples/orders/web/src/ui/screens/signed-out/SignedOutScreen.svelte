@@ -1,5 +1,5 @@
 <!-- Example code (RDP orders example): a placeholder. Change it or delete it to fit your project. -->
-<!-- Layer: Interface Adapters — View shown after sign-out or a failed sign-in. No state, so no ViewModel. -->
+<!-- Layer: UI (Frameworks & Drivers) — View shown after sign-out or a failed sign-in. No state, so no ViewModel. -->
 <script lang="ts">
   import { getContainer } from '../../../composition/context.ts';
 

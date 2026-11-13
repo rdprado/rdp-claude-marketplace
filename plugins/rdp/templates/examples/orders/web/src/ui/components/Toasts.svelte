@@ -1,5 +1,5 @@
 <!-- Example code (RDP orders example): a placeholder. Change it or delete it to fit your project. -->
-<!-- Layer: Interface Adapters — View of the toasts shared by every screen (ToastStore). -->
+<!-- Layer: UI (Frameworks & Drivers) — View of the toasts shared by every screen (ToastStore). -->
 <script lang="ts">
   import { getContainer } from '../../composition/context.ts';
 

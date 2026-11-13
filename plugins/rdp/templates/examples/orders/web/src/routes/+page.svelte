@@ -1,7 +1,7 @@
 <!-- Example code (RDP orders example): a placeholder. Change it or delete it to fit your project. -->
-<!-- Layer: Interface Adapters — entry: the home route only renders the orders screen. -->
+<!-- Layer: UI (Frameworks & Drivers) — entry: the home route only renders the orders screen. -->
 <script lang="ts">
-  import OrdersScreen from '#interface-adapters/screens/orders/OrdersScreen.svelte';
+  import OrdersScreen from '#ui/screens/orders/OrdersScreen.svelte';
 </script>
 
 <OrdersScreen />

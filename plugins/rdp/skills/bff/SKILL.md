@@ -202,7 +202,7 @@ View (page) → OrdersViewModel → OrdersGateway (interface) → HttpOrdersGate
 ```
 
 - The front is MVVM; the orders example in this plugin shows it (`templates/examples/orders/web/src/`:
-  `interface-adapters/screens/orders/OrdersScreen.svelte` and `OrdersViewModel.ts`,
+  `ui/screens/orders/OrdersScreen.svelte` and `interface-adapters/screens/orders/OrdersViewModel.ts`,
   `application/ports/OrdersGateway.ts`, `infrastructure/data/orders/HttpOrdersGateway.ts`). The
   ViewModel calls the gateway interface; no front use case when the logic is in the API.
 - Field validators in the browser only warn before sending. The API validates for real, and both

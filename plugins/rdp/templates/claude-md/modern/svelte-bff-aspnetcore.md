@@ -15,9 +15,11 @@ Stack: TypeScript + SvelteKit (front + BFF) and .NET <version> + ASP.NET Core We
 ```
 web/                                         SvelteKit: front (MVVM) + BFF
   src/application/  src/infrastructure/   front: ports, Result; gateways, clock, i18n
-  src/interface-adapters/screens/<feature>/  XViewModel.ts, XScreen.svelte, tests
+  src/interface-adapters/screens/<feature>/  XViewModel.ts + tests (no .svelte here)
+  src/interface-adapters/field-formats/      format checks of reusable fields (quantityFormat.ts...)
+  src/ui/screens/<feature>/  src/ui/fields/  src/ui/shell/   the .svelte views (Frameworks & Drivers), humble
   src/composition/                           container + context (front)
-  src/routes/                                +page.svelte only renders a screen
+  src/routes/                                +page.svelte only renders a view from #ui/
   src/lib/server/bff/                        auth.ts, api.ts, observability.ts (modules, no ports)
   src/hooks.server.ts                        BFF entry + its composition root
 api/                                         ASP.NET Core, per rdp-mode

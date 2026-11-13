@@ -1,5 +1,5 @@
 <!-- Example code (RDP orders example): a placeholder. Change it or delete it to fit your project. -->
-<!-- Layer: Interface Adapters — View of the orders screen. Humble: binds to OrdersViewModel, translates
+<!-- Layer: UI (Frameworks & Drivers) — View of the orders screen. Humble: binds to OrdersViewModel, translates
      its keys and calls its methods; every decision is already in $vm.
      Actions are called through the instance (`() => vm.retry()`); passed loose (`vm.retry`), a method
      loses `this`. -->
