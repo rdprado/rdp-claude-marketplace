@@ -51,8 +51,10 @@ function setup() {
     },
     redirectUri: REDIRECT_URI,
     clientIpHeader: IP_HEADER,
+    sessionLifetimeMs: 7 * 24 * 3_600_000,
     fetch,
     now: clock.now,
+    schedule: () => {}, // expiry is the unit tests' job
     logger: recordingLogger()
   });
   return { auth, clock };

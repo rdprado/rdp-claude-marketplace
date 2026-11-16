@@ -4,6 +4,7 @@ import { createAuth, pkceChallenge, userIdOf, type CsrfCheck, type Fetch, type S
 import {
   accessTokenFor,
   fakeCookieJar,
+  fakeScheduler,
   manualClock,
   recordingLogger,
   type FakeCookieJar
@@ -21,6 +22,7 @@ const CLIENT_ID = 'orders-web';
 const SCOPE = 'openid offline_access orders-api';
 const LOGIN_IP = '203.0.113.7';
 const NEW_IP = '198.51.100.9';
+const LIFETIME_MS = 7 * 24 * 3_600_000;
 
 // ---------- A fake identity provider: a fetch that records each call and answers it ----------
 
@@ -75,16 +77,19 @@ function setup(
   const identityProvider = fakeIdentityProvider(answer);
   const clock = manualClock(NOW);
   const logger = recordingLogger();
+  const scheduler = fakeScheduler(clock);
   const auth = createAuth({
     identityProvider: { authority: IDP, clientId: CLIENT_ID, scope: SCOPE, clientSecret },
     redirectUri: REDIRECT_URI,
     clientIpHeader: IP_HEADER,
+    sessionLifetimeMs: LIFETIME_MS,
     fetch: identityProvider.fetch,
     now: clock.now,
+    schedule: scheduler.schedule,
     logger,
     sessions
   });
-  return { auth, identityProvider, clock, logger, sessions };
+  return { auth, identityProvider, clock, logger, sessions, scheduler };
 }
 
 // Starts a sign-in and returns the state the provider would echo back.
@@ -101,7 +106,8 @@ function sessionExpiringIn(msLeft: number, refreshToken: string | null = 'refres
         accessToken: OLD_ACCESS,
         refreshToken,
         expiresAt: NOW.getTime() + msLeft,
-        loginIp: LOGIN_IP
+        loginIp: LOGIN_IP,
+        endsAt: NOW.getTime() + LIFETIME_MS
       }
     ]
   ]);
@@ -184,13 +190,15 @@ describe('auth sign-in', () => {
       accessToken: ACCESS,
       refreshToken: 'refresh-1',
       expiresAt: NOW.getTime() + 300_000,
-      loginIp: LOGIN_IP
+      loginIp: LOGIN_IP,
+      endsAt: NOW.getTime() + LIFETIME_MS
     });
     expect(cookies.options.get('bff_session')).toEqual({
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      path: '/'
+      path: '/',
+      maxAge: LIFETIME_MS / 1000
     });
     const cookieValues = [...cookies.values.values()].join(' ');
     expect(cookieValues).not.toContain(ACCESS);
@@ -341,7 +349,8 @@ describe('auth session', () => {
       accessToken: NEW_ACCESS,
       refreshToken: 'refresh-2',
       expiresAt: NOW.getTime() + 300_000,
-      loginIp: LOGIN_IP
+      loginIp: LOGIN_IP,
+      endsAt: NOW.getTime() + LIFETIME_MS
     });
     expect(identityProvider.calls[0]?.ip).toBe(LOGIN_IP);
     expect(cookies.get('bff_session')).toBe('session-1');
@@ -627,7 +636,11 @@ describe('auth session without a refresh token: no one to ask', () => {
     expect(identityProvider.calls).toEqual([]);
     expect(sessions.has('session-1')).toBe(false);
     expect(cookies.get('bff_session')).toBeUndefined();
-    expect(logger.find('session.expired')?.fields).toEqual({ userId: 'user-1', traceId: 'trace-1' });
+    expect(logger.find('session.expired')?.fields).toEqual({
+      reason: 'no_refresh_token',
+      userId: 'user-1',
+      traceId: 'trace-1'
+    });
   });
 
   it('a code exchange without refresh_token stores a session with none', async () => {
@@ -643,6 +656,75 @@ describe('auth session without a refresh token: no one to ask', () => {
 
     // Assert
     expect(sessions.get(cookies.get('bff_session') ?? '')?.refreshToken).toBeNull();
+  });
+});
+
+describe('auth session lifetime', () => {
+  async function signIn(started: ReturnType<typeof setup>): Promise<FakeCookieJar> {
+    const cookies = fakeCookieJar();
+    const state = startSignIn(started.auth, cookies);
+    await started.auth.completeSignIn(cookies, { code: 'good-code', state }, LOGIN_IP, 'trace-1');
+    return cookies;
+  }
+
+  it('at the end of its lifetime the session is gone, with no request: logged, nothing revoked', async () => {
+    // Arrange
+    const started = setup(issued);
+    const cookies = await signIn(started);
+    const id = cookies.get('bff_session') ?? '';
+
+    // Act
+    started.scheduler.runDue(LIFETIME_MS);
+
+    // Assert
+    expect(started.sessions.has(id)).toBe(false);
+    expect(started.identityProvider.calls.map((call) => call.path)).toEqual(['/oauth/token']);
+    expect(started.logger.find('session.expired')?.fields).toEqual({ reason: 'lifetime', userId: 'user-1' });
+  });
+
+  it('a timer that fires early leaves the session and checks again for the time left', async () => {
+    // Arrange
+    const started = setup(issued);
+    const cookies = await signIn(started);
+    const id = cookies.get('bff_session') ?? '';
+
+    // Act
+    started.scheduler.fireEarly(1);
+
+    // Assert
+    expect(started.sessions.has(id)).toBe(true);
+    expect(started.scheduler.pendingDelays()).toEqual([1]);
+  });
+
+  it('a request after its end finds no session, even before the timer runs', async () => {
+    // Arrange
+    const started = setup(rotates, sessionExpiringIn(LIFETIME_MS * 2));
+    started.clock.advance(LIFETIME_MS);
+    const cookies = signedIn();
+
+    // Act
+    const lookup = await started.auth.currentSession(cookies, LOGIN_IP, 'trace-1');
+
+    // Assert
+    expect(lookup).toEqual({ kind: 'none' });
+    expect(started.identityProvider.calls).toEqual([]);
+    expect(cookies.get('bff_session')).toBeUndefined();
+    expect(started.logger.find('session.expired')?.fields).toEqual({
+      reason: 'lifetime',
+      userId: 'user-1',
+      traceId: 'trace-1'
+    });
+  });
+
+  it('a refresh never extends it', async () => {
+    // Arrange
+    const started = setup(rotates, sessionExpiringIn(0));
+
+    // Act
+    await started.auth.currentSession(signedIn(), LOGIN_IP, 'trace-1');
+
+    // Assert
+    expect(started.sessions.get('session-1')?.endsAt).toBe(NOW.getTime() + LIFETIME_MS);
   });
 });
 

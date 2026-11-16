@@ -6,9 +6,11 @@
 // way): `{authority}/authorize`, `/oauth/token`, `/oauth/revoke`. This BFF is a registered client: client id +
 // scope on every call, and in HML/PRD a client secret (form field `client_secret`), so only this BFF can
 // redeem a code or send the user's IP header.
-// The identity provider decides about the session, never the BFF: the BFF sends it the user's IP on the code
-// exchange and on every refresh, and a request from another IP than the session's refreshes at once with
-// that IP. Refused → the session ends (ip-changed); the provider down → unavailable, and the old token is
+// The session lives `sessionLifetimeMs` (Session:LifetimeHours, the developer's choice, shorter than the
+// refresh token's cap): it is the cookie's Max-Age, and on the server a timer drops the session at that same
+// moment (the BFF never sees the cookie expire). Within it, the identity provider decides about the session:
+// the BFF sends it the user's IP on the code exchange and on every refresh, and a request from another IP
+// than the session's refreshes at once with that IP. Refused → the session ends (ip-changed); the provider down → unavailable, and the old token is
 // never used from the new IP. Without a refresh token there is no one to ask: the token serves until it
 // expires, then the user signs in again.
 // No hub here. If the BFF proxied a connection that stays open (a SignalR hub, a WebSocket), the token sent
@@ -45,6 +47,8 @@ export type Session = {
   readonly expiresAt: number;
   // The IP the provider last accepted for this session (null: the request had none).
   readonly loginIp: string | null;
+  // When the session (and its cookie) ends, epoch milliseconds: sign-in + the session lifetime.
+  readonly endsAt: number;
 };
 
 export type SessionLookup =
@@ -88,13 +92,19 @@ export type AuthOptions = {
   // The header that carries the user's IP to the identity provider (IdentityProvider:ClientIpHeader). The
   // provider should trust it only from a confidential client, so only this BFF can set it.
   readonly clientIpHeader: string;
+  // How long a session and its cookie live (Session:LifetimeHours).
+  readonly sessionLifetimeMs: number;
   readonly fetch: Fetch;
   readonly now: () => Date;
+  // Runs `run` after `delayMs`; the real one is `runLater` below, tests pass a fake.
+  readonly schedule: Schedule;
   readonly logger: Logger;
   // In memory by default: a restart signs everyone out, and the BFF runs as one instance. Sessions stay
-  // until sign-out or a failed refresh.
+  // until sign-out, a failed refresh or the end of their lifetime.
   readonly sessions?: Map<string, Session>;
 };
+
+export type Schedule = (delayMs: number, run: () => void) => void;
 
 export type Auth = ReturnType<typeof createAuth>;
 
@@ -180,11 +190,16 @@ export function createAuth(options: AuthOptions) {
 
     const sessionId = newId();
     const { tokens } = result;
+    const endsAt = now().getTime() + options.sessionLifetimeMs;
     sessions.set(
       sessionId,
-      sessionFrom(tokens.accessToken, tokens.refreshToken, tokens.expiresInSeconds, clientIp)
+      sessionFrom(tokens.accessToken, tokens.refreshToken, tokens.expiresInSeconds, clientIp, endsAt)
     );
-    cookies.set(SESSION_COOKIE, sessionId, sessionCookie);
+    expireWhenOver(sessionId);
+    cookies.set(SESSION_COOKIE, sessionId, {
+      ...sessionCookie,
+      maxAge: Math.floor(options.sessionLifetimeMs / 1000)
+    });
     logger.info('signin.ok', { userId: userIdOf(result.tokens.accessToken), traceId });
     return 'signed-in';
   }
@@ -219,6 +234,7 @@ export function createAuth(options: AuthOptions) {
     clientIp: string | null,
     traceId: string
   ): Promise<SessionLookup | 'look-again'> {
+    if (endIfOver(id, traceId)) return { kind: 'none' }; // its timer may not have run yet
     const pending = renewals.get(id);
     if (pending) return (await pending).kind === 'unavailable' ? { kind: 'unavailable' } : 'look-again';
 
@@ -226,7 +242,11 @@ export function createAuth(options: AuthOptions) {
     if (stored.refreshToken === null) {
       if (!expired) return active(stored); // no one to ask: the token serves until it expires
       sessions.delete(id);
-      logger.info('session.expired', { userId: userIdOf(stored.accessToken), traceId });
+      logger.info('session.expired', {
+        reason: 'no_refresh_token',
+        userId: userIdOf(stored.accessToken),
+        traceId
+      });
       return { kind: 'none' };
     }
     const newIp = clientIp !== stored.loginIp;
@@ -282,7 +302,8 @@ export function createAuth(options: AuthOptions) {
       tokens.accessToken,
       tokens.refreshToken ?? refreshToken, // none in the answer: the current one stays good (RFC 6749 §6)
       tokens.expiresInSeconds,
-      clientIp ?? stored.loginIp // accepted by the provider from this IP
+      clientIp ?? stored.loginIp, // accepted by the provider from this IP
+      stored.endsAt // a refresh never extends the session
     );
     if (sessions.has(id)) sessions.set(id, session); // unless it signed out meanwhile
     logger.info('refresh.ok', { userId, traceId });
@@ -324,17 +345,39 @@ export function createAuth(options: AuthOptions) {
     return 'failed';
   }
 
+  // Drops the session once its lifetime is over, else checks again when it should be.
+  function expireWhenOver(id: string): void {
+    const stored = sessions.get(id);
+    if (!stored) return; // signed out or ended already
+    const left = stored.endsAt - now().getTime();
+    if (left > 0) options.schedule(left, () => expireWhenOver(id));
+    else endIfOver(id, null);
+  }
+
+  // true: the session's lifetime is over (its cookie expired at that same moment), and it is gone now.
+  // No revoke: the refresh token lived only here (revoking it too is optional, see the bff skill).
+  function endIfOver(id: string, traceId: string | null): boolean {
+    const stored = sessions.get(id);
+    if (!stored || stored.endsAt > now().getTime()) return false;
+    sessions.delete(id);
+    const userId = userIdOf(stored.accessToken);
+    logger.info('session.expired', { reason: 'lifetime', userId, ...(traceId === null ? {} : { traceId }) });
+    return true;
+  }
+
   function sessionFrom(
     accessToken: string,
     refreshToken: string | null,
     expiresInSeconds: number,
-    loginIp: string | null
+    loginIp: string | null,
+    endsAt: number
   ): Session {
     return {
       accessToken,
       refreshToken,
       expiresAt: now().getTime() + expiresInSeconds * 1000,
-      loginIp
+      loginIp,
+      endsAt
     };
   }
 
@@ -347,6 +390,14 @@ export function createAuth(options: AuthOptions) {
   }
 
   return { startSignIn, completeSignIn, currentSession, signOut, checkCsrf };
+}
+
+// The real Schedule. setTimeout holds at most ~24.8 days: a longer wait fires early, and expireWhenOver
+// checks again. unref: a pending expiry never keeps the process alive.
+const MAX_TIMER_MS = 2_147_483_647;
+
+export function runLater(delayMs: number, run: () => void): void {
+  setTimeout(run, Math.min(delayMs, MAX_TIMER_MS)).unref();
 }
 
 // S256 (RFC 7636): BASE64URL(SHA256(verifier)).

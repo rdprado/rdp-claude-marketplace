@@ -25,7 +25,8 @@ const LOCAL = {
     Scope: 'openid offline_access orders-example-api',
     RedirectUri: 'http://localhost:5173/auth/callback',
     ClientIpHeader: 'X-End-User-IP'
-  }
+  },
+  Session: { LifetimeHours: 168 }
 };
 
 function errorOf(action: () => unknown): string {
@@ -50,7 +51,8 @@ describe('loadAppSettings', () => {
       idpScope: 'openid offline_access orders-example-api',
       authRedirectUri: 'http://localhost:5173/auth/callback',
       clientIpHeader: 'X-End-User-IP',
-      idpClientSecret: ''
+      idpClientSecret: '',
+      sessionLifetimeHours: 168
     });
   });
 
@@ -63,6 +65,7 @@ describe('loadAppSettings', () => {
       // Assert
       expect(message).toContain('Api:Url is still a TODO placeholder');
       expect(message).toContain('IdentityProvider:ClientId is still a TODO placeholder');
+      expect(message).toContain('Session:LifetimeHours is still a TODO placeholder');
       expect(message).toContain(
         'IdentityProvider:ClientSecret is missing (set IdentityProvider__ClientSecret)'
       );
@@ -122,12 +125,27 @@ describe('loadAppSettings', () => {
     ).toThrow('IdentityProvider:ClientIpHeader must be an HTTP header name');
   });
 
+  it.each([['0'], ['-1'], ['1.5'], ['a week']])('refuses Session:LifetimeHours %s', (hours) => {
+    // Act / Assert
+    expect(() => loadAppSettings({ Session__LifetimeHours: hours }, fileWith(LOCAL))).toThrow(
+      'Session:LifetimeHours must be a whole number of hours above 0'
+    );
+  });
+
+  it('reads Session:LifetimeHours from the environment as text', () => {
+    // Act
+    const settings = loadAppSettings({ Session__LifetimeHours: '12' }, fileWith(LOCAL));
+
+    // Assert
+    expect(settings.sessionLifetimeHours).toBe(12);
+  });
+
   it('names every missing key', () => {
     // Act / Assert
     expect(() => loadAppSettings({}, fileWith({}))).toThrow(
       'Api:Url is missing; IdentityProvider:Authority is missing; IdentityProvider:ClientId is missing; ' +
         'IdentityProvider:Scope is missing; IdentityProvider:RedirectUri is missing; ' +
-        'IdentityProvider:ClientIpHeader is missing'
+        'IdentityProvider:ClientIpHeader is missing; Session:LifetimeHours is missing'
     );
   });
 

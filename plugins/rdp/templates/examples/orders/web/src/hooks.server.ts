@@ -4,7 +4,7 @@
 import { json } from '@sveltejs/kit';
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import { createApiProxy, type ApiProxy } from '#bff/api.ts';
-import { createAuth, type Auth } from '#bff/auth.ts';
+import { createAuth, runLater, type Auth } from '#bff/auth.ts';
 import {
   createLogger,
   reportUnexpected,
@@ -44,8 +44,10 @@ function buildBff(): Bff {
     },
     redirectUri: config.authRedirectUri,
     clientIpHeader: config.clientIpHeader,
+    sessionLifetimeMs: config.sessionLifetimeHours * 3_600_000,
     fetch,
     now,
+    schedule: runLater,
     logger
   });
   const api = createApiProxy({

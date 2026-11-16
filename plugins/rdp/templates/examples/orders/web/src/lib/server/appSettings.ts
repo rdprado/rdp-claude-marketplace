@@ -24,6 +24,9 @@ export type AppSettings = {
   // The client secret (confidential client). Only from the environment (IdentityProvider__ClientSecret),
   // never in a committed file; required in HML and PRD. "" locally: a public client (PKCE only).
   readonly idpClientSecret: string;
+  // How long a session and its cookie live, in hours: the developer's choice, shorter than the refresh
+  // token's cap at the identity provider (the BFF can't see that cap).
+  readonly sessionLifetimeHours: number;
 };
 
 export type Environment = Readonly<Record<string, string | undefined>>;
@@ -40,7 +43,8 @@ const KEYS = {
   idpScope: { section: 'IdentityProvider', name: 'Scope' },
   authRedirectUri: { section: 'IdentityProvider', name: 'RedirectUri' },
   clientIpHeader: { section: 'IdentityProvider', name: 'ClientIpHeader' },
-  idpClientSecret: { section: 'IdentityProvider', name: 'ClientSecret' }
+  idpClientSecret: { section: 'IdentityProvider', name: 'ClientSecret' },
+  sessionLifetimeHours: { section: 'Session', name: 'LifetimeHours' }
 } as const satisfies Record<keyof AppSettings, Key>;
 
 // The real thing: process.env and web/config/ (relative to the working directory the server starts in).
@@ -76,7 +80,8 @@ export function loadAppSettings(environment: Environment, readConfigFile: ReadCo
     idpScope: read(KEYS.idpScope, checkedText),
     authRedirectUri: read(KEYS.authRedirectUri),
     clientIpHeader: read(KEYS.clientIpHeader, checkedHeaderName),
-    idpClientSecret: secret
+    idpClientSecret: secret,
+    sessionLifetimeHours: Number(read(KEYS.sessionLifetimeHours, checkedHours))
   };
   if (problems.length > 0) {
     throw new Error(`Invalid configuration (config/${fileName} + environment): ${problems.join('; ')}`);
@@ -106,6 +111,15 @@ function isPlaceholder(value: unknown): boolean {
 
 function checkedText(value: unknown): { value: string } | { problem: string } {
   return typeof value === 'string' && value.trim() !== '' ? { value } : { problem: 'is missing' };
+}
+
+// A whole number of hours above 0, as a JSON number or (from the environment) as text.
+function checkedHours(value: unknown): { value: string } | { problem: string } {
+  if (value === undefined || value === '') return { problem: 'is missing' };
+  const hours = Number(value);
+  return Number.isInteger(hours) && hours > 0 && /^\d+$/.test(String(value).trim())
+    ? { value: String(hours) }
+    : { problem: 'must be a whole number of hours above 0' };
 }
 
 // An HTTP header name (RFC 9110 token).
