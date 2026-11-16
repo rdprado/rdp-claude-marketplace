@@ -33,14 +33,14 @@ The BFF holds the tokens, so browser JavaScript never sees them (IETF
 
 ## The BFF cookie's lifetime
 
-- Its lifetime is the BFF's choice (ask the developer the number, e.g. 1 week), never longer than the
-  refresh token's (no refresh token: than the access token's). The BFF can't see the refresh
-  token's cap: ask the developer for it too.
+- Its lifetime is the BFF's choice (ask the developer the number, e.g. 1 week). Pick it shorter than the
+  refresh token's cap; the BFF doesn't check it (no config for that cap). If it is longer, the provider
+  refuses the refresh at its cap and the session ends there (401, sign in again).
 - The server-side session ends at the same moment as the cookie. The BFF never sees the cookie expire
   (the browser just stops sending it), so that expiry runs on the server, automatically.
-- **Revoke the refresh token** at the provider's revocation endpoint (RFC 7009) on logout, and when the
-  session expires before the refresh token's cap. If both end at the same moment, there is nothing to
-  revoke.
+- **Revoke the refresh token** at the provider's revocation endpoint (RFC 7009) on logout.
+- Optional, only if the developer asks: revoke it also when the session expires. Low gain: the token
+  lives only in the BFF's memory, and a restart (each deploy) drops every session without revoking.
 
 The identity provider is kr-identity (orders example: `auth.ts`, `appSettings.ts`):
 
@@ -135,8 +135,7 @@ Unit tests, passing fake `fetch`, clock and logger:
 
 - **Sign-in:** valid code → session id cookie with HttpOnly + Secure + SameSite and its Max-Age, tokens
   stored; invalid code → no cookie.
-- **Session expiry:** at the end of its lifetime the session is gone and its refresh token revoked; no
-  revoke when the refresh token ends at that same moment.
+- **Session expiry:** at the end of its lifetime the session is gone, with no request needed.
 - **Refresh:**
   - Expired access → renews; the stored tokens rotate, the cookie keeps the same id.
   - Refresh refused (400) → session deleted, cookie cleared, 401; any other error → 503, session kept.
