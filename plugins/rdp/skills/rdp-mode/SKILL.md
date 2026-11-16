@@ -96,7 +96,7 @@ If the project's `CLAUDE.md` says otherwise, the project wins. Before a task, lo
 * Use cases, validators and business rules are unit-testable without a framework; boundary implementations get integration tests.
 * One feature = one use case folder.
 * A use case is an interface plus a class with constructor injection, in every language that has them. Framework style (hooks, bare functions) stays in Entry.
-* A browser front is thin: no entities or use cases, rules come ready from the API. A thicker client (WPF, desktop or mobile app) may have its own entities and use cases, with the same layers and rules.
+* A browser front is thin: no entities or use cases, rules come ready from the API. Only the View (`.svelte`, `src/ui/`) is framework; the layers sit right in `src/`, never in `src/lib/` (SvelteKit's folder; `src/lib/server/` only when the BFF is SvelteKit's server). A thicker client (WPF, desktop or mobile app) may have its own entities and use cases, with the same layers and rules.
 * Old code moves to this shape when you touch it, not all at once; agree with the developer first.
 * Expected failures (validation, not found, conflict) return a result with a status; exceptions only for the unexpected. The result and `ValidationResult` types are identical in every project.
 * A use case's Output never carries entities: Entry maps it to its response.
@@ -176,7 +176,7 @@ hold rules written nowhere else, so treat the code as part of these rules.
   5. **End-to-end**: the deployed HML, after the deploy, never on a PR. PRD: a read-only smoke check at most.
   * **Subcutaneous** (only with a UI): the ViewModel with the backend faked.
 * Integration tests (2 and 3): never a real outside system or the local `appsettings.json`; Docker if needed; parallel, no shared state. When a fake differs from the real system, fix the fake.
-* If TypeScript: Vitest (Svelte) or Jest (React Native), `it.each`; tests never next to the code: `tests/unit/` (same path as `src/`), `tests/integration/narrow/` and `/broad/`, shared fakes in `tests/support/`; `describe` = the unit, `it` = the scenario; fake clock and timers; no faker; fakes implement the port (no `any`, no casts). ViewModels are the main target: `new` with fake ports, check `vm.state`, `dispose()` stops what it started; views have no test.
+* If TypeScript: Vitest (Svelte) or Jest (React Native), `it.each`; tests never next to the code: `tests/unit/` mirrors the layer folders (`src/infrastructure/data/x.ts` → `tests/unit/infrastructure/data/x.test.ts`), `tests/integration/narrow/` and `/broad/`, shared fakes in `tests/support/`; `describe` = the unit, `it` = the scenario; fake clock and timers; no faker; fakes implement the port (no `any`, no casts). ViewModels are the main target: `new` with fake ports, check `vm.state`, `dispose()` stops what it started; views have no test.
 * If C#: xUnit + Moq + `Assert.*`, `FakeTimeProvider`; no FluentAssertions, Shouldly, NSubstitute, Bogus or AutoFixture. `Tests.Unit`, `Tests.Integration/Narrow` and `/Broad` (the shared test host and fakes in `Infrastructure/`); `WebApplicationFactory`, SQLite in-memory (not EF InMemory) reset per test; `Method_Scenario_Expected`, `[Theory]`.
 * For reference, see the orders example's tests.
 

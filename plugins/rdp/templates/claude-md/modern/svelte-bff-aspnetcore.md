@@ -15,6 +15,7 @@ Stack: TypeScript + SvelteKit (front + BFF) and .NET <version> + ASP.NET Core We
 ```
 web/                                         SvelteKit: front (MVVM) + BFF
   src/application/  src/infrastructure/   front: ports, Result; gateways, clock, i18n
+                                          (layers right in src/, never in src/lib/)
   src/interface-adapters/screens/<feature>/  XViewModel.ts (no .svelte here)
   src/interface-adapters/field-formats/      format checks of reusable fields (quantityFormat.ts...)
   src/ui/screens/<feature>/  src/ui/fields/  src/ui/shell/   the .svelte views (Frameworks & Drivers), humble
@@ -22,7 +23,7 @@ web/                                         SvelteKit: front (MVVM) + BFF
   src/routes/                                +page.svelte only renders a view from #ui/
   src/lib/server/bff/                        auth.ts, api.ts, observability.ts (modules, no ports)
   src/hooks.server.ts                        BFF entry + its composition root
-  tests/unit/<same path as src>/             X.test.ts, never next to the code
+  tests/unit/<layer>/.../X.test.ts           mirrors the layer folders, never next to the code
   tests/integration/narrow/  /broad/         tests/support/ (shared fakes, fake HTTP server)
 api/                                         ASP.NET Core, per rdp-mode
   src/<App>.Entities
