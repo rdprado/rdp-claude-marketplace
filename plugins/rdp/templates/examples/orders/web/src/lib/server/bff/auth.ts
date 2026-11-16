@@ -8,7 +8,7 @@
 // redeem a code or send the user's IP header.
 // The session lives `sessionLifetimeMs` (Session:LifetimeHours, the developer's choice, shorter than the
 // refresh token's cap): it is the cookie's Max-Age, and on the server a timer drops the session at that same
-// moment (the BFF never sees the cookie expire). Within it, the identity provider decides about the session:
+// moment (the BFF never sees the cookie expire) and revokes its refresh token. Within it, the identity provider decides about the session:
 // the BFF sends it the user's IP on the code exchange and on every refresh, and a request from another IP
 // than the session's refreshes at once with that IP. Refused → the session ends (ip-changed); the provider down → unavailable, and the old token is
 // never used from the new IP. Without a refresh token there is no one to ask: the token serves until it
@@ -195,7 +195,7 @@ export function createAuth(options: AuthOptions) {
       sessionId,
       sessionFrom(tokens.accessToken, tokens.refreshToken, tokens.expiresInSeconds, clientIp, endsAt)
     );
-    expireWhenOver(sessionId);
+    void expireWhenOver(sessionId);
     cookies.set(SESSION_COOKIE, sessionId, {
       ...sessionCookie,
       maxAge: Math.floor(options.sessionLifetimeMs / 1000)
@@ -234,7 +234,7 @@ export function createAuth(options: AuthOptions) {
     clientIp: string | null,
     traceId: string
   ): Promise<SessionLookup | 'look-again'> {
-    if (endIfOver(id, traceId)) return { kind: 'none' }; // its timer may not have run yet
+    if (await endIfOver(id, traceId)) return { kind: 'none' }; // its timer may not have run yet
     const pending = renewals.get(id);
     if (pending) return (await pending).kind === 'unavailable' ? { kind: 'unavailable' } : 'look-again';
 
@@ -346,22 +346,31 @@ export function createAuth(options: AuthOptions) {
   }
 
   // Drops the session once its lifetime is over, else checks again when it should be.
-  function expireWhenOver(id: string): void {
+  async function expireWhenOver(id: string): Promise<void> {
     const stored = sessions.get(id);
     if (!stored) return; // signed out or ended already
     const left = stored.endsAt - now().getTime();
-    if (left > 0) options.schedule(left, () => expireWhenOver(id));
-    else endIfOver(id, null);
+    if (left > 0) options.schedule(left, () => void expireWhenOver(id));
+    else await endIfOver(id, null);
   }
 
   // true: the session's lifetime is over (its cookie expired at that same moment), and it is gone now.
-  // No revoke: the refresh token lived only here (revoking it too is optional, see the bff skill).
-  function endIfOver(id: string, traceId: string | null): boolean {
+  // Its refresh token is revoked too: otherwise it stays valid at the provider until its cap, and with no
+  // one using it, reuse detection can't catch a stolen copy. Best effort: one try; a failure is logged.
+  async function endIfOver(id: string, traceId: string | null): Promise<boolean> {
     const stored = sessions.get(id);
     if (!stored || stored.endsAt > now().getTime()) return false;
     sessions.delete(id);
-    const userId = userIdOf(stored.accessToken);
-    logger.info('session.expired', { reason: 'lifetime', userId, ...(traceId === null ? {} : { traceId }) });
+    const trace = traceId === null ? {} : { traceId };
+    const revoked = stored.refreshToken === null ? false : await idp.revoke(stored.refreshToken);
+    if (!revoked && stored.refreshToken !== null)
+      logger.error('idp.unavailable', { during: 'expiry', ...trace });
+    logger.info('session.expired', {
+      reason: 'lifetime',
+      userId: userIdOf(stored.accessToken),
+      revoked,
+      ...trace
+    });
     return true;
   }
 

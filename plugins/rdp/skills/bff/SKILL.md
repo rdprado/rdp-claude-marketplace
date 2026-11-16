@@ -38,9 +38,10 @@ The BFF holds the tokens, so browser JavaScript never sees them (IETF
   refuses the refresh at its cap and the session ends there (401, sign in again).
 - The server-side session ends at the same moment as the cookie. The BFF never sees the cookie expire
   (the browser just stops sending it), so that expiry runs on the server, automatically.
-- **Revoke the refresh token** at the provider's revocation endpoint (RFC 7009) on logout.
-- Optional, only if the developer asks: revoke it also when the session expires. Low gain: the token
-  lives only in the BFF's memory, and a restart (each deploy) drops every session without revoking.
+- **Revoke the refresh token** at the provider's revocation endpoint (RFC 7009) on logout and when the
+  session expires. Otherwise it stays valid at the provider until its cap, and once the BFF stops using
+  it, reuse detection can't catch a stolen copy. Best effort: one try, no retry; a failure logs
+  `idp.unavailable`.
 
 The identity provider is kr-identity (orders example: `auth.ts`, `appSettings.ts`):
 
@@ -135,7 +136,8 @@ Unit tests, passing fake `fetch`, clock and logger:
 
 - **Sign-in:** valid code → session id cookie with HttpOnly + Secure + SameSite and its Max-Age, tokens
   stored; invalid code → no cookie.
-- **Session expiry:** at the end of its lifetime the session is gone, with no request needed.
+- **Session expiry:** at the end of its lifetime the session is gone and its refresh token revoked, with
+  no request needed; a failed revoke is logged and the session is gone anyway.
 - **Refresh:**
   - Expired access → renews; the stored tokens rotate, the cookie keeps the same id.
   - Refresh refused (400) → session deleted, cookie cleared, 401; any other error → 503, session kept.
@@ -192,7 +194,7 @@ end up) yet: pick it per project, with the team; the tool names below are exampl
 |---|---|
 | `signin.ok` / `signin.failed` (reason: `invalid_code`, `expired`, `idp_down`) | Info / Warning |
 | `refresh.ok` / `refresh.failed` (reason: `revoked`, `ip_refused`, `idp_down`) | Info / Warning |
-| `session.expired` (its lifetime ended; or no refresh token and the access token expired) | Info |
+| `session.expired` (its lifetime ended, and whether the revoke worked; or no refresh token and the access token expired) | Info |
 | `signout` (and whether the revoke worked) | Info |
 | `csrf.rejected` | Warning |
 

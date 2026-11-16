@@ -660,6 +660,9 @@ describe('auth session without a refresh token: no one to ask', () => {
 });
 
 describe('auth session lifetime', () => {
+  // The expiry's revoke runs after the timer returns: let its promises finish.
+  const settled = () => new Promise((resolve) => setImmediate(resolve));
+
   async function signIn(started: ReturnType<typeof setup>): Promise<FakeCookieJar> {
     const cookies = fakeCookieJar();
     const state = startSignIn(started.auth, cookies);
@@ -667,7 +670,7 @@ describe('auth session lifetime', () => {
     return cookies;
   }
 
-  it('at the end of its lifetime the session is gone, with no request: logged, nothing revoked', async () => {
+  it('at the end of its lifetime the session is gone, with no request, and its refresh token revoked', async () => {
     // Arrange
     const started = setup(issued);
     const cookies = await signIn(started);
@@ -675,11 +678,37 @@ describe('auth session lifetime', () => {
 
     // Act
     started.scheduler.runDue(LIFETIME_MS);
+    await settled();
 
     // Assert
     expect(started.sessions.has(id)).toBe(false);
-    expect(started.identityProvider.calls.map((call) => call.path)).toEqual(['/oauth/token']);
-    expect(started.logger.find('session.expired')?.fields).toEqual({ reason: 'lifetime', userId: 'user-1' });
+    expect(started.identityProvider.calls.map((call) => call.path)).toEqual([
+      '/oauth/token',
+      '/oauth/revoke'
+    ]);
+    expect(started.identityProvider.calls[1]?.form.get('token')).toBe('refresh-1');
+    expect(started.logger.find('session.expired')?.fields).toEqual({
+      reason: 'lifetime',
+      userId: 'user-1',
+      revoked: true
+    });
+  });
+
+  it('a failed revoke at the end is logged, and the session is gone anyway', async () => {
+    // Arrange
+    let calls = 0;
+    const started = setup(() => (calls++ === 0 ? issued() : down()));
+    const cookies = await signIn(started);
+    const id = cookies.get('bff_session') ?? '';
+
+    // Act
+    started.scheduler.runDue(LIFETIME_MS);
+    await settled();
+
+    // Assert
+    expect(started.sessions.has(id)).toBe(false);
+    expect(started.logger.find('idp.unavailable')?.fields).toEqual({ during: 'expiry' });
+    expect(started.logger.find('session.expired')?.fields).toMatchObject({ revoked: false });
   });
 
   it('a timer that fires early leaves the session and checks again for the time left', async () => {
@@ -707,11 +736,12 @@ describe('auth session lifetime', () => {
 
     // Assert
     expect(lookup).toEqual({ kind: 'none' });
-    expect(started.identityProvider.calls).toEqual([]);
+    expect(started.identityProvider.calls.map((call) => call.path)).toEqual(['/oauth/revoke']);
     expect(cookies.get('bff_session')).toBeUndefined();
     expect(started.logger.find('session.expired')?.fields).toEqual({
       reason: 'lifetime',
       userId: 'user-1',
+      revoked: true,
       traceId: 'trace-1'
     });
   });
