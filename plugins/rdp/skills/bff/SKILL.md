@@ -1,10 +1,10 @@
 ---
 name: bff
-description: "RDP rules for the BFF (backend for frontend): who holds identity and the token, HttpOnly cookie, BFF inside the API vs a separate BFF (SvelteKit / Next.js), proxying. Use when touching sign-in, tokens, cookies, identity provider calls or a BFF, in .NET or TypeScript."
+description: "RDP rules for the BFF (backend for frontend): who holds the tokens, HttpOnly cookie, BFF inside the API vs a separate BFF (SvelteKit / Next.js), proxying. Use when touching sign-in, tokens, cookies, identity provider calls or a BFF, in .NET or TypeScript."
 ---
 # BFF (backend for frontend)
 
-The BFF holds identity and the token, so browser JavaScript never sees it (IETF
+The BFF holds the tokens, so browser JavaScript never sees them (IETF
 `draft-ietf-oauth-browser-based-apps` §6.1; Duende BFF):
 
 - At sign-in the BFF talks to the identity provider and keeps the tokens **on the server**. The
@@ -15,6 +15,32 @@ The BFF holds identity and the token, so browser JavaScript never sees it (IETF
 - On each call the browser sends the cookie; the BFF looks the tokens up by the id.
 - Tokens live in the BFF's memory: a restart (each deploy) signs everyone out, and the BFF runs as
   one instance.
+
+## Two sessions: the identity provider's and the app's
+
+- **The provider's session** is its own cookie, on its own domain, set once in the response to the
+  login. It is for the provider's own pages: the login page (SSO: `/authorize` skips it while the cookie
+  lives), logout (end-session), account pages.
+- **The app's session** (a front end, a BFF, a native app) is the tokens it received. It has nothing to
+  do with the provider's cookie; in a BFF, the BFF cookie points at those tokens.
+- **Login and logout at the provider are not login and logout at the app.** Apps A and B signed in
+  through one provider: logging out of A ends A only; the provider's session and B stay. If A's logout
+  also calls end-session, the provider's session ends and B still works with its own tokens.
+- **An access token has no tie to the provider's cookie**, with or without `offline_access`.
+- **`offline_access` is for getting tokens without being logged in at the provider anymore.** With it,
+  the client also gets a refresh token; a refresh never looks at the provider's cookie. It works until
+  the refresh token's cap or until it is revoked.
+
+## The BFF cookie's lifetime
+
+- Its lifetime is the BFF's choice (ask the developer the number, e.g. 1 week), never longer than the
+  refresh token's (no refresh token: than the access token's). The BFF can't see the refresh
+  token's cap: ask the developer for it too.
+- The server-side session ends at the same moment as the cookie. The BFF never sees the cookie expire
+  (the browser just stops sending it), so that expiry runs on the server, automatically.
+- **Revoke the refresh token** at the provider's revocation endpoint (RFC 7009) on logout, and when the
+  session expires before the refresh token's cap. If both end at the same moment, there is nothing to
+  revoke.
 
 The identity provider is kr-identity (orders example: `auth.ts`, `appSettings.ts`):
 
@@ -69,10 +95,11 @@ clock and logger).
 
 ### What the modules do (no framework imports)
 
-- Sign-in: exchanges the code with the identity provider, stores the tokens, sets the session id cookie.
+- Sign-in: exchanges the code with the identity provider, stores the tokens, sets the session id cookie
+  with its lifetime (above).
 - Refresh: renews the access token when it expires (the refresh token rotates). Requests that arrive
   together share one renewal. When the identity provider refuses the refresh (expired, revoked, a rotated token used again),
-  drop the session. The identity provider decides when a session ends, never the BFF.
+  drop the session.
 - User's IP (when the identity provider checks it): the BFF takes the IP from the connection (the
   framework's client address; behind a proxy, only the proxy's header), never from a header the browser
   sets, and sends it in the provider's header on the code exchange and on every refresh. A request from
@@ -84,14 +111,15 @@ clock and logger).
   refresh the BFF sends the new token to the upstream for that connection. The BFF never closes it; the
   upstream decides.
 - Sign-out: revokes the refresh token at the identity provider, deletes the session, clears the cookie.
+- Session expiry: as in "The BFF cookie's lifetime" above.
 - Proxy: forwards `/api/*` to the API with `Authorization: Bearer`.
 
 **That is all a BFF does.** Each of these is a question for the developer, never something to add on
 your own, even when it looks safer:
 
 - timeouts, retries, reconnect loops, waits before shutting down;
-- refreshing before the token expires, or any other timing number;
-- caps (pending sign-ins, sessions, messages, sockets) and cleanup timers;
+- refreshing before the token expires, the cookie's lifetime, or any other timing number;
+- caps (pending sign-ins, sessions, messages, sockets);
 - validating or limiting what goes to an upstream: the upstream validates and limits itself;
 - status codes or socket close codes of its own beyond the cases below.
 
@@ -105,11 +133,13 @@ the BFF's own. The BFF answers by itself only when the request never got an answ
 
 Unit tests, passing fake `fetch`, clock and logger:
 
-- **Sign-in:** valid code → session id cookie with HttpOnly + Secure + SameSite, tokens stored;
-  invalid code → no cookie.
+- **Sign-in:** valid code → session id cookie with HttpOnly + Secure + SameSite and its Max-Age, tokens
+  stored; invalid code → no cookie.
+- **Session expiry:** at the end of its lifetime the session is gone and its refresh token revoked; no
+  revoke when the refresh token ends at that same moment.
 - **Refresh:**
   - Expired access → renews; the stored tokens rotate, the cookie keeps the same id.
-  - Failed refresh → session deleted, cookie cleared, 401.
+  - Refresh refused (400) → session deleted, cookie cleared, 401; any other error → 503, session kept.
   - Two concurrent requests → only one renewal.
   - Another IP → refreshes at once with that IP; refused → 401 `ip-changed`; provider down → 503.
   - No refresh token → the token serves until it expires, then no session; the provider is never called.
@@ -125,7 +155,7 @@ Unit tests, passing fake `fetch`, clock and logger:
 Integration (`tests/integration/`): narrow, each module against a fake HTTP server (`auth` → identity
 provider, `api` → API, the front's gateway → BFF); broad, the real entry against fake upstreams.
 
-### Observability
+## Observability
 
 Developers must be able to follow any request from the browser to the API and see auth problems
 before users report them. One `401` is normal (sessions expire); the signal is the pattern.
@@ -163,7 +193,7 @@ end up) yet: pick it per project, with the team; the tool names below are exampl
 |---|---|
 | `signin.ok` / `signin.failed` (reason: `invalid_code`, `expired`, `idp_down`) | Info / Warning |
 | `refresh.ok` / `refresh.failed` (reason: `revoked`, `ip_refused`, `idp_down`) | Info / Warning |
-| `session.expired` (no refresh token, the access token expired) | Info |
+| `session.expired` (its lifetime ended; or no refresh token and the access token expired) | Info |
 | `signout` (and whether the revoke worked) | Info |
 | `csrf.rejected` | Warning |
 
